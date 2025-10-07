@@ -1,0 +1,26 @@
+# Dependencies
+/node_modules
+/RitmoFitApp/node_modules
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/RitmoFitApp/android/gradle-wrapper.jar
+
+# Metro and React Native Cache
+/dist
+/.next/
+/.expo/
+/.parcel-cache
+/temp
+/.vscode/
+/.idea/
+
+# Native Build Folders (Crucial para no subir archivos pesados)
+/android/build
+/android/app/build
+/RitmoFitApp/android/build
+/RitmoFitApp/android/app/build
+/RitmoFitApp/ios/build
+/RitmoFitApp/android/.gradle
