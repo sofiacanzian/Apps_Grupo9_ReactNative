@@ -1,0 +1,10 @@
+# Ignorar todas las dependencias
+/ritmofit-frontend/node_modules
+/ritmofit-backend/node_modules
+
+# Ignorar carpetas de compilación
+/ritmofit-frontend/dist
+/ritmofit-backend/build
+
+# Archivos de configuración y secretos
+/ritmofit-backend/.env
