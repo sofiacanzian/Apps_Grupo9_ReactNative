@@ -1,23 +1,38 @@
 // src/pages/HistorialPage.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../services/api'; 
-import { useAuthStore } from '../store/authStore';
+// 🚨 NUEVAS IMPORTACIONES PARA EL CALENDARIO Y ESTILOS 🚨
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css'; 
+import { es } from 'date-fns/locale'; 
 
 const HistorialPage = () => {
+    // Cambiamos los estados de filtro para guardar objetos Date o null
     const [historial, setHistorial] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [filtro, setFiltro] = useState({ fechaInicio: '', fechaFin: '' });
+    const [fechaInicio, setFechaInicio] = useState(null);
+    const [fechaFin, setFechaFin] = useState(null);
+
+    // Función auxiliar para convertir objeto Date a formato AAAA-MM-DD para la API
+    const formatDateToISO = (date) => {
+        if (!date) return '';
+        // toISOString() devuelve algo como '2025-10-31T03:00:00.000Z', solo tomamos la parte de la fecha
+        return date.toISOString().split('T')[0];
+    };
 
     const loadHistorial = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Llama al nuevo endpoint con los filtros
+            // Convertir objetos Date a strings AAAA-MM-DD para la API
+            const fechaInicioISO = formatDateToISO(fechaInicio);
+            const fechaFinISO = formatDateToISO(fechaFin);
+
             const response = await api.get('/asistencias/historial', {
                 params: {
-                    fechaInicio: filtro.fechaInicio,
-                    fechaFin: filtro.fechaFin,
+                    fechaInicio: fechaInicioISO,
+                    fechaFin: fechaFinISO,
                 }
             });
             setHistorial(response.data.data);
@@ -28,45 +43,63 @@ const HistorialPage = () => {
         }
     };
 
+    // Recargar cuando las fechas cambian
     useEffect(() => {
         loadHistorial();
-    }, [filtro]); // Recarga cuando cambian los filtros
+    }, [fechaInicio, fechaFin]); 
+
 
     if (isLoading) return <h2>Cargando Historial...</h2>;
     if (error) return <h2 style={{ color: 'red' }}>Error: {error}</h2>;
 
     return (
-        <div style={{ padding: '20px' }}>
+        <div style={styles.padding}>
             <h1>Historial de Asistencias</h1>
             
             {/* Controles de Filtro por Rango de Fechas */}
             <div style={styles.filtroContainer}>
                 <label>Inicio:</label>
-                <input 
-                    type="date" 
-                    value={filtro.fechaInicio} 
-                    onChange={(e) => setFiltro({...filtro, fechaInicio: e.target.value})}
-                    style={styles.input}
+                <DatePicker
+                    selected={fechaInicio}
+                    onChange={(date) => setFechaInicio(date)}
+                    selectsStart
+                    startDate={fechaInicio}
+                    endDate={fechaFin}
+                    dateFormat="dd/MM/yyyy" // Formato amigable para el usuario
+                    isClearable={true}
+                    placeholderText="DD/MM/AAAA"
+                    locale={es} // Idioma español
+                    wrapperClassName="datePicker" // Clase para envolver y estilizar
                 />
+
                 <label>Fin:</label>
-                <input 
-                    type="date" 
-                    value={filtro.fechaFin} 
-                    onChange={(e) => setFiltro({...filtro, fechaFin: e.target.value})}
-                    style={styles.input}
+                <DatePicker
+                    selected={fechaFin}
+                    onChange={(date) => setFechaFin(date)}
+                    selectsEnd
+                    startDate={fechaInicio}
+                    endDate={fechaFin}
+                    minDate={fechaInicio} // La fecha final no puede ser anterior a la inicial
+                    dateFormat="dd/MM/yyyy"
+                    isClearable={true}
+                    placeholderText="DD/MM/AAAA"
+                    locale={es}
+                    wrapperClassName="datePicker"
                 />
             </div>
 
             {/* Listado de Historial */}
             <div style={styles.historialList}>
                 {historial.length === 0 ? (
-                    <p>No hay asistencias registradas en este período.</p>
+                    <p>No hay asistencias registradas en este período. 😟</p>
                 ) : (
                     historial.map((asistencia, index) => (
+                        // Formatear la fecha de asistencia para la visualización
                         <div key={index} style={styles.asistenciaCard}>
-                            <p><strong>Clase:</strong> {asistencia.Clase.nombre}</p>
-                            <p><strong>Sede:</strong> {asistencia.Clase.Sede.nombre}</p>
-                            <p><strong>Fecha:</strong> {asistencia.fecha_asistencia}</p>
+                            <p><strong>Clase:</strong> {asistencia.Clase ? asistencia.Clase.nombre : 'N/A'}</p>
+                            <p><strong>Sede:</strong> {asistencia.Clase && asistencia.Clase.Sede ? asistencia.Clase.Sede.nombre : 'N/A'}</p>
+                            <p><strong>Fecha:</strong> {new Date(asistencia.fecha_asistencia).toLocaleDateString('es-AR')}</p>
+                            <p><strong>Hora:</strong> {asistencia.checkin_hora}</p>
                             <p><strong>Duración:</strong> {asistencia.duracion_minutos} min</p>
                         </div>
                     ))
@@ -77,17 +110,15 @@ const HistorialPage = () => {
 };
 
 const styles = {
+    padding: { padding: '20px' },
     filtroContainer: {
         marginBottom: '20px',
         display: 'flex',
         gap: '10px',
         alignItems: 'center',
     },
-    input: {
-        padding: '8px',
-        borderRadius: '4px',
-        border: '1px solid #ccc',
-    },
+    // Nota: El estilo 'input' ya no se aplica al input nativo, sino al wrapper del DatePicker.
+    // Los estilos base se aplican desde 'react-datepicker.css'.
     historialList: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',

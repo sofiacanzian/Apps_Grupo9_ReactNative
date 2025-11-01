@@ -44,23 +44,36 @@ const ReservasPage = () => {
             <h1>Mis Próximas Reservas</h1>
             
             {reservas.length === 0 ? (
-                <p>No tienes reservas activas. ¡Reserva una clase hoy!</p>
+                <p>No tienes reservas activas. ¡Reserva una clase hoy! 📅</p>
             ) : (
-                reservas.map(reserva => (
-                    <div key={reserva.id} style={styles.reservaCard}>
-                        <h3>{reserva.Clase.nombre}</h3>
-                        <p><strong>Sede:</strong> {reserva.Clase.Sede.nombre}</p>
-                        <p><strong>Horario:</strong> {reserva.Clase.dia} | {reserva.Clase.hora_inicio}</p>
-                        <p>Estado: Confirmada</p>
-                        
-                        <button 
-                            onClick={() => handleCancel(reserva.id, reserva.Clase.nombre)}
-                            style={styles.cancelButton}
-                        >
-                            Cancelar Reserva
-                        </button>
-                    </div>
-                ))
+                reservas.map(reserva => {
+                    // 🚨 CORRECCIÓN CLAVE: Formatear la fecha 🚨
+                    const fechaClase = new Date(reserva.Clase.fecha).toLocaleDateString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
+
+                    return (
+                        // 🚨 Usar reserva.id como clave única 🚨
+                        <div key={reserva.id} style={styles.reservaCard}> 
+                            <h3>{reserva.Clase.nombre}</h3>
+                            <p><strong>Sede:</strong> {reserva.Clase.Sede.nombre}</p>
+                            
+                            {/* 🚨 MOSTRAR FECHA FORMATEADA Y HORA 🚨 */}
+                            <p><strong>Horario:</strong> {fechaClase} | {reserva.Clase.hora_inicio}</p>
+                            
+                            <p>Estado: Confirmada</p>
+                            
+                            <button 
+                                onClick={() => handleCancel(reserva.id, reserva.Clase.nombre)}
+                                style={styles.cancelButton}
+                            >
+                                Cancelar Reserva
+                            </button>
+                        </div>
+                    );
+                })
             )}
         </div>
     );

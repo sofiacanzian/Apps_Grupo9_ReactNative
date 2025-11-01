@@ -2,19 +2,23 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { fetchClases, createReserva } from '../services/claseService';
+import SweetAlert2 from 'react-sweetalert2'; // Importación correcta para el modal
 
+// ---------------------------------------------------------------
+// Componente principal
+// ---------------------------------------------------------------
 const ClasesPage = () => {
     const { user } = useAuthStore();
     const [clases, setClases] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [filters, setFilters] = useState({}); // Para filtrar por sede, fecha, etc.
+    const [filters, setFilters] = useState({}); 
+    const [swalProps, setSwalProps] = useState({}); // Estado para SweetAlert2
 
     const loadClases = async () => {
         setIsLoading(true);
         setError(null);
         try {
-            // Llama a la API con el token JWT (manejado por el interceptor de axios)
             const data = await fetchClases(filters);
             setClases(data);
         } catch (err) {
@@ -29,26 +33,57 @@ const ClasesPage = () => {
     }, [filters]);
 
     const handleReserva = async (claseId, claseNombre) => {
-        if (window.confirm(`¿Confirmas la reserva para la clase: ${claseNombre}?`)) {
+    // Dispara el modal de confirmación
+    setSwalProps({
+        show: true,
+        title: 'Confirmación de Reserva',
+        text: `¿Confirma la reserva para la clase: ${claseNombre}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, Reservar',
+        cancelButtonText: 'Cancelar',
+        
+        // 🚨 REVERTIR A LA PROPIEDAD CORRECTA: onConfirm 🚨
+        onConfirm: async () => { 
             try {
                 await createReserva(claseId);
-                alert(`¡Reserva exitosa para ${claseNombre}!`);
-                loadClases(); // Refrescar para ver los cupos actualizados
+                // Mostrar alerta de éxito
+                setSwalProps({
+                    show: true,
+                    title: '¡Reserva Exitosa!',
+                    text: `La clase ${claseNombre} fue reservada.`,
+                    icon: 'success'
+                });
+                loadClases(); // Refrescar los cupos
             } catch (err) {
-                alert(`Error al reservar: ${err.message}`);
+                // Mostrar alerta de error
+                setSwalProps({
+                    show: true,
+                    title: 'Error de Reserva',
+                    text: err.message || 'Ocurrió un error inesperado.',
+                    icon: 'error'
+                });
             }
+        },
+        // 🚨 REVERTIR A LA PROPIEDAD CORRECTA: onCancel 🚨
+        onCancel: () => {
+            setSwalProps({}); // Cierra el modal sin hacer nada
         }
-    };
+    });
+};
 
     if (isLoading) return <h2>Cargando Catálogo...</h2>;
     if (error) return <h2 style={{ color: 'red' }}>Error: {error}</h2>;
 
     return (
         <div style={{ padding: '20px' }}>
+            {/* Componente SweetAlert2: siempre visible, se activa con swalProps */}
+            <SweetAlert2 {...swalProps} didClose={() => setSwalProps({})} />
+            
             <h1>Catálogo de Clases y Turnos</h1>
             <p>Socio: {user.nombre}. Filtra, explora y reserva.</p>
             
-            {/* Aquí irían los inputs para filtrar por sede, disciplina y fecha */}
+            {/* Área de filtros iría aquí */}
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px' }}>
                 {clases.map(clase => (
@@ -66,15 +101,26 @@ const ClasesPage = () => {
     );
 };
 
+// ---------------------------------------------------------------
+// Componente de Tarjeta de Clase (ClaseCard)
+// ---------------------------------------------------------------
 const ClaseCard = ({ clase, onReserve, isSocio }) => {
-    // Nota: El backend debe devolver el cupo real. Aquí usamos cupo_disponible como placeholder.
-    const cupoDisponible = clase.cupo_disponible;
+    const formattedDate = new Date(clase.fecha).toLocaleDateString('es-AR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    // 🚨 Usamos cupo_disponible que viene calculado del backend 🚨
+    const cupoDisponible = clase.cupo_disponible; 
     return (
         <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', boxShadow: '2px 2px 5px rgba(0,0,0,0.1)' }}>
             <h3>{clase.nombre}</h3>
             <p><strong>Sede:</strong> {clase.Sede ? clase.Sede.nombre : 'N/A'}</p>
             <p><strong>Instructor:</strong> {clase.User ? clase.User.nombre : 'N/A'}</p>
-            <p><strong>Horario:</strong> {clase.dia} | {clase.hora_inicio} ({clase.duracion_minutos} min)</p>
+            
+            <p><strong>Horario:</strong> {formattedDate} | {clase.hora_inicio} ({clase.duracion_minutos} min)</p>
+            
             <p style={{ color: cupoDisponible > 0 ? 'blue' : 'red' }}>
                 Cupos: {cupoDisponible}
             </p>

@@ -22,9 +22,6 @@ const Header = () => {
                 <Link to="/historial" style={styles.navLink}>Historial</Link>
                 <Link to="/perfil" style={styles.navLink}>Perfil ({user?.nombre})</Link>
             </nav>
-            <button onClick={handleLogout} style={styles.logoutButton}>
-                Salir
-            </button>
         </header>
     );
 };
