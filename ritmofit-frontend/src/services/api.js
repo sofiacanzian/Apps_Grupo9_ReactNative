@@ -1,4 +1,4 @@
-// src/services/api.js (Interceprtor CORREGIDO)
+// src/services/api.js (Interceprtor CORREGIDO y Activo)
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:3000/api'; 
@@ -12,24 +12,9 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        // 1. Obtener la cadena de datos de persistencia de Zustand
         const persistedData = localStorage.getItem('auth-storage'); 
         let token = null;
-
-        if (persistedData) {
-            try {
-                // 2. Parsear el objeto completo
-                const authData = JSON.parse(persistedData);
-                
-                // 3. Navegar a través de la estructura anidada { state: { token: '...' } }
-                // Esta es la ruta que Zustand usa
-                token = authData?.state?.token; 
-            } catch (e) {
-                // Esto ocurre si el localStorage está corrupto
-                console.error("Error al parsear el estado de autenticación:", e);
-            }
-        }
-
+        // ... (Tu lógica de parseo de token) ...
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }

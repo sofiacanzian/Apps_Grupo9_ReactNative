@@ -1,49 +1,65 @@
 // src/pages/HistorialPage.jsx
 import React, { useState, useEffect } from 'react';
 import api from '../services/api'; 
-// 🚨 NUEVAS IMPORTACIONES PARA EL CALENDARIO Y ESTILOS 🚨
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css'; 
 import { es } from 'date-fns/locale'; 
+import { useAuthStore } from '../store/authStore'; 
+import { fetchHistorial } from '../services/claseService';
+
+// --- Función Auxiliar para Obtener Headers con Token (se duplica la lógica) ---
+const getConfig = () => {
+    // Lee el token directamente del estado de Zustand
+    const token = useAuthStore.getState().token; 
+    if (!token) return {}; 
+    return {
+        headers: {
+            'Authorization': `Bearer ${token}` 
+        }
+    };
+};
+// --------------------------------------------------------------------------
 
 const HistorialPage = () => {
-    // Cambiamos los estados de filtro para guardar objetos Date o null
     const [historial, setHistorial] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [fechaInicio, setFechaInicio] = useState(null);
     const [fechaFin, setFechaFin] = useState(null);
 
-    // Función auxiliar para convertir objeto Date a formato AAAA-MM-DD para la API
     const formatDateToISO = (date) => {
         if (!date) return '';
-        // toISOString() devuelve algo como '2025-10-31T03:00:00.000Z', solo tomamos la parte de la fecha
         return date.toISOString().split('T')[0];
     };
 
     const loadHistorial = async () => {
         setIsLoading(true);
         setError(null);
+        
+        // Función auxiliar para convertir objeto Date a formato AAAA-MM-DD (para la API)
+        const formatDateToISO = (date) => {
+            if (!date) return '';
+            return date.toISOString().split('T')[0];
+        };
+
         try {
-            // Convertir objetos Date a strings AAAA-MM-DD para la API
             const fechaInicioISO = formatDateToISO(fechaInicio);
             const fechaFinISO = formatDateToISO(fechaFin);
 
-            const response = await api.get('/asistencias/historial', {
-                params: {
-                    fechaInicio: fechaInicioISO,
-                    fechaFin: fechaFinISO,
-                }
+            // 🚨 USAR LA NUEVA FUNCIÓN DE SERVICIO 🚨
+            const data = await fetchHistorial({
+                fechaInicio: fechaInicioISO,
+                fechaFin: fechaFinISO,
             });
-            setHistorial(response.data.data);
+            
+            setHistorial(data);
         } catch (err) {
-            setError(err.response?.data?.message || 'Error al cargar el historial.');
+            setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Recargar cuando las fechas cambian
     useEffect(() => {
         loadHistorial();
     }, [fechaInicio, fechaFin]); 
@@ -65,11 +81,11 @@ const HistorialPage = () => {
                     selectsStart
                     startDate={fechaInicio}
                     endDate={fechaFin}
-                    dateFormat="dd/MM/yyyy" // Formato amigable para el usuario
+                    dateFormat="dd/MM/yyyy" 
                     isClearable={true}
                     placeholderText="DD/MM/AAAA"
-                    locale={es} // Idioma español
-                    wrapperClassName="datePicker" // Clase para envolver y estilizar
+                    locale={es} 
+                    wrapperClassName="datePicker"
                 />
 
                 <label>Fin:</label>
@@ -79,7 +95,7 @@ const HistorialPage = () => {
                     selectsEnd
                     startDate={fechaInicio}
                     endDate={fechaFin}
-                    minDate={fechaInicio} // La fecha final no puede ser anterior a la inicial
+                    minDate={fechaInicio} 
                     dateFormat="dd/MM/yyyy"
                     isClearable={true}
                     placeholderText="DD/MM/AAAA"
@@ -94,7 +110,6 @@ const HistorialPage = () => {
                     <p>No hay asistencias registradas en este período. 😟</p>
                 ) : (
                     historial.map((asistencia, index) => (
-                        // Formatear la fecha de asistencia para la visualización
                         <div key={index} style={styles.asistenciaCard}>
                             <p><strong>Clase:</strong> {asistencia.Clase ? asistencia.Clase.nombre : 'N/A'}</p>
                             <p><strong>Sede:</strong> {asistencia.Clase && asistencia.Clase.Sede ? asistencia.Clase.Sede.nombre : 'N/A'}</p>
@@ -117,8 +132,6 @@ const styles = {
         gap: '10px',
         alignItems: 'center',
     },
-    // Nota: El estilo 'input' ya no se aplica al input nativo, sino al wrapper del DatePicker.
-    // Los estilos base se aplican desde 'react-datepicker.css'.
     historialList: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',

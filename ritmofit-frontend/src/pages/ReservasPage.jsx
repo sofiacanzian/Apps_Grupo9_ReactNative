@@ -1,6 +1,6 @@
 // src/pages/ReservasPage.jsx
 import React, { useState, useEffect } from 'react';
-import { fetchMisReservas, cancelReserva } from '../services/claseService';
+import { fetchMisReservas, cancelReserva } from '../services/claseService'; // Usa las funciones ya corregidas
 
 const ReservasPage = () => {
     const [reservas, setReservas] = useState([]);
@@ -11,6 +11,7 @@ const ReservasPage = () => {
         setIsLoading(true);
         setError(null);
         try {
+            // fetchMisReservas ahora envía el token gracias a la modificación en claseService.js
             const data = await fetchMisReservas();
             setReservas(data);
         } catch (err) {
@@ -27,6 +28,7 @@ const ReservasPage = () => {
     const handleCancel = async (reservaId, claseNombre) => {
         if (window.confirm(`¿Seguro que deseas cancelar la reserva de ${claseNombre}?`)) {
             try {
+                // cancelReserva ahora envía el token gracias a la modificación en claseService.js
                 await cancelReserva(reservaId);
                 alert(`Reserva de ${claseNombre} cancelada.`);
                 loadReservas(); // Refrescar la lista
@@ -47,7 +49,6 @@ const ReservasPage = () => {
                 <p>No tienes reservas activas. ¡Reserva una clase hoy! 📅</p>
             ) : (
                 reservas.map(reserva => {
-                    // 🚨 CORRECCIÓN CLAVE: Formatear la fecha 🚨
                     const fechaClase = new Date(reserva.Clase.fecha).toLocaleDateString('es-AR', {
                         day: '2-digit',
                         month: '2-digit',
@@ -55,14 +56,10 @@ const ReservasPage = () => {
                     });
 
                     return (
-                        // 🚨 Usar reserva.id como clave única 🚨
                         <div key={reserva.id} style={styles.reservaCard}> 
                             <h3>{reserva.Clase.nombre}</h3>
                             <p><strong>Sede:</strong> {reserva.Clase.Sede.nombre}</p>
-                            
-                            {/* 🚨 MOSTRAR FECHA FORMATEADA Y HORA 🚨 */}
                             <p><strong>Horario:</strong> {fechaClase} | {reserva.Clase.hora_inicio}</p>
-                            
                             <p>Estado: Confirmada</p>
                             
                             <button 

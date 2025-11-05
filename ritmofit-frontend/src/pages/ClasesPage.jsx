@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { fetchClases, createReserva } from '../services/claseService';
-import SweetAlert2 from 'react-sweetalert2'; // Importación correcta para el modal
+import SweetAlert2 from 'react-sweetalert2'; 
 
 // ---------------------------------------------------------------
 // Componente principal
@@ -33,52 +33,52 @@ const ClasesPage = () => {
     }, [filters]);
 
     const handleReserva = async (claseId, claseNombre) => {
-    // Dispara el modal de confirmación
-    setSwalProps({
-        show: true,
-        title: 'Confirmación de Reserva',
-        text: `¿Confirma la reserva para la clase: ${claseNombre}?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, Reservar',
-        cancelButtonText: 'Cancelar',
-        
-        // 🚨 REVERTIR A LA PROPIEDAD CORRECTA: onConfirm 🚨
-        onConfirm: async () => { 
-            try {
-                await createReserva(claseId);
-                // Mostrar alerta de éxito
-                setSwalProps({
-                    show: true,
-                    title: '¡Reserva Exitosa!',
-                    text: `La clase ${claseNombre} fue reservada.`,
-                    icon: 'success'
-                });
-                loadClases(); // Refrescar los cupos
-            } catch (err) {
-                // Mostrar alerta de error
-                setSwalProps({
-                    show: true,
-                    title: 'Error de Reserva',
-                    text: err.message || 'Ocurrió un error inesperado.',
-                    icon: 'error'
-                });
+        // Dispara el modal de confirmación
+        setSwalProps({
+            show: true,
+            title: 'Confirmación de Reserva',
+            text: `¿Confirma la reserva para la clase: ${claseNombre}?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, Reservar',
+            cancelButtonText: 'Cancelar',
+            
+            // 🚨 CORRECCIÓN FINAL: Usar onConfirm (el nombre estándar del evento) 🚨
+            onConfirm: async () => { 
+                try {
+                    await createReserva(claseId);
+                    // Mostrar alerta de éxito
+                    setSwalProps({
+                        show: true,
+                        title: '¡Reserva Exitosa!',
+                        text: `La clase ${claseNombre} fue reservada.`,
+                        icon: 'success'
+                    });
+                    loadClases(); // Refrescar los cupos
+                } catch (err) {
+                    // Mostrar alerta de error
+                    setSwalProps({
+                        show: true,
+                        title: 'Error de Reserva',
+                        text: err.message || 'Ocurrió un error inesperado.',
+                        icon: 'error'
+                    });
+                }
+            },
+            // 🚨 Usar onCancel (El nombre estándar que evita warnings) 🚨
+            onCancel: () => {
+                setSwalProps({}); // Cierra el modal sin hacer nada
             }
-        },
-        // 🚨 REVERTIR A LA PROPIEDAD CORRECTA: onCancel 🚨
-        onCancel: () => {
-            setSwalProps({}); // Cierra el modal sin hacer nada
-        }
-    });
-};
+        });
+    };
 
     if (isLoading) return <h2>Cargando Catálogo...</h2>;
     if (error) return <h2 style={{ color: 'red' }}>Error: {error}</h2>;
 
     return (
         <div style={{ padding: '20px' }}>
-            {/* Componente SweetAlert2: siempre visible, se activa con swalProps */}
-            <SweetAlert2 {...swalProps} didClose={() => setSwalProps({})} />
+            {/* Componente SweetAlert2: usa onClose para limpiar el estado */}
+            <SweetAlert2 {...swalProps} onClose={() => setSwalProps({})} />
             
             <h1>Catálogo de Clases y Turnos</h1>
             <p>Socio: {user.nombre}. Filtra, explora y reserva.</p>
@@ -111,7 +111,7 @@ const ClaseCard = ({ clase, onReserve, isSocio }) => {
         year: 'numeric'
     });
 
-    // 🚨 Usamos cupo_disponible que viene calculado del backend 🚨
+    // Usa cupo_disponible que viene calculado del backend
     const cupoDisponible = clase.cupo_disponible; 
     return (
         <div style={{ border: '1px solid #ccc', padding: '15px', borderRadius: '8px', boxShadow: '2px 2px 5px rgba(0,0,0,0.1)' }}>
