@@ -21,7 +21,7 @@ exports.protect = async (req, res, next) => {
         // 2. Verificar el token (firma y expiración)
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         
-        // 🚨 CORRECCIÓN CLAVE: Asegurar que el ID decodificado sea INTEGER
+        // 🚨 CORRECCIÓN CLAVE: Usar parseInt() para asegurar que la DB (MySQL INTEGER) lo encuentre 🚨
         const userId = parseInt(decoded.id, 10); 
         
         // 3. Buscar el usuario en la DB por el ID (Primary Key)
