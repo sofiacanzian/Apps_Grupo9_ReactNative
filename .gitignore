@@ -1,10 +1,35 @@
 # Ignorar todas las dependencias
 /ritmofit-frontend/node_modules
 /ritmofit-backend/node_modules
+/ritmofit-mobile/node_modules
 
 # Ignorar carpetas de compilación
 /ritmofit-frontend/dist
 /ritmofit-backend/build
+/ritmofit-mobile/.expo
+/ritmofit-mobile/.expo-shared
+/ritmofit-mobile/dist
+/ritmofit-mobile/build
 
 # Archivos de configuración y secretos
 /ritmofit-backend/.env
+/ritmofit-mobile/.env
+
+# Logs y caché de Expo
+/ritmofit-mobile/npm-debug.*
+/ritmofit-mobile/*.log
+/ritmofit-mobile/*.jks
+/ritmofit-mobile/*.p8
+/ritmofit-mobile/*.p12
+/ritmofit-mobile/*.key
+/ritmofit-mobile/*.mobileprovision
+/ritmofit-mobile/*.orig.*
+/ritmofit-mobile/web-build/
+
+# Archivos temporales de macOS/Linux
+.DS_Store
+*/.DS_Store
+
+# Archivos temporales de Windows
+Thumbs.db
+*/Thumbs.db
