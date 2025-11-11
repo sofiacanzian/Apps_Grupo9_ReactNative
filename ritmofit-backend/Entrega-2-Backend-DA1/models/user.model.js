@@ -12,6 +12,11 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    username: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        unique: true,
+    },
     email: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -21,7 +26,15 @@ const User = sequelize.define('User', {
         type: DataTypes.ENUM('socio', 'instructor', 'admin'),
         defaultValue: 'socio',
     },
-    // Campos para la autenticación OTP
+    password_hash: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    email_verificado: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+    },
     otp_code: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -30,13 +43,14 @@ const User = sequelize.define('User', {
         type: DataTypes.DATE,
         allowNull: true,
     },
+    otp_context: {
+        type: DataTypes.ENUM('login', 'register', 'password_reset', 'account_delete'),
+        allowNull: true,
+    },
     foto_url: {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    // =======================================================
-    // 🚨 NUEVOS CAMPOS DE PERFIL AÑADIDOS 🚨
-    // =======================================================
     telefono: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -46,12 +60,20 @@ const User = sequelize.define('User', {
         allowNull: true,
     },
     fechaNacimiento: {
-        type: DataTypes.DATEONLY, // Usamos DATEONLY para solo guardar la fecha (AAAA-MM-DD)
+        type: DataTypes.DATEONLY,
         allowNull: true,
-    }
-    // =======================================================
+    },
+    activo: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
+    },
+    fecha_baja: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
 }, {
-    tableName: 'users' // Nombre de la tabla en MySQL
+    tableName: 'users'
 });
 
 module.exports = User;

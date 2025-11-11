@@ -9,8 +9,14 @@ router.use(authMiddleware.protect);
 
 // GET /api/users/me (Ver perfil)
 router.get('/me', userController.getMe);
+router.get('/profile', userController.getMe); // alias para compatibilidad móvil
 
 // PUT /api/users/me (Editar perfil)
 router.put('/me', userController.updateMe); 
+router.put('/profile', userController.updateMe);
+
+// OTP para eliminar cuenta
+router.post('/delete/request', userController.requestAccountDeletionOtp);
+router.post('/delete/confirm', userController.confirmAccountDeletion);
 
 module.exports = router;

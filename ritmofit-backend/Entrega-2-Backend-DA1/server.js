@@ -11,6 +11,7 @@ const sedeRoutes = require('./routes/sede.routes');
 const claseRoutes = require('./routes/clase.routes'); 
 const reservaRoutes = require('./routes/reserva.routes'); 
 const asistenciaRoutes = require('./routes/asistencia.routes'); // <-- AGREGAR
+const historialRoutes = require('./routes/historial.routes');
 
 
 const app = express();
@@ -20,12 +21,29 @@ const PORT = process.env.PORT || 3000;
 // 1. Middlewares de Express
 // =================================================================
 
-// 2. CONFIGURACIÓN CORS: HABILITA EL ACCESO DESDE EL FRONTEND DE VITE
+// 2. CONFIGURACIÓN CORS: HABILITA EL ACCESO DESDE EL FRONTEND (web y mobile)
+const defaultOrigins = [
+    'http://localhost:5173',
+    'http://localhost:8081',
+    'http://10.0.2.2:8081',
+    'exp://127.0.0.1:8081',
+    'exp://10.0.2.2:8081'
+];
+
+const configuredOrigins = process.env.CORS_ORIGINS 
+    ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
+    : defaultOrigins;
+
 const corsOptions = {
-    // Origen permitido: La URL exacta donde corre Vite
-    origin: 'http://localhost:5173', 
+    origin: (origin, callback) => {
+        if (!origin || configuredOrigins.includes(origin) || configuredOrigins.includes('*')) {
+            return callback(null, true);
+        }
+        console.warn(`CORS bloqueó el origen: ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true, // Importante si usas sesiones o tokens en cookies
+    credentials: true,
     optionsSuccessStatus: 204
 };
 
@@ -59,6 +77,7 @@ app.use('/api/clases', claseRoutes);
 // Rutas CRUD para Reservas
 app.use('/api/reservas', reservaRoutes); 
 app.use('/api/asistencias', asistenciaRoutes); // <-- CONECTAR
+app.use('/api/historial', historialRoutes);
 
 
 // =================================================================

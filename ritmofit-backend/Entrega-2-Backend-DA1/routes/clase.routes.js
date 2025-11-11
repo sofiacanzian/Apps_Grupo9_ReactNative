@@ -6,6 +6,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 // Rutas de Acceso Público (Cualquier usuario puede ver el horario)
 router.get('/', claseController.getAllClases);
+router.get('/:id', claseController.getClaseById);
 
 // Rutas Protegidas (Solo Admin/Instructor pueden CREAR, ACTUALIZAR, BORRAR)
 router.use(authMiddleware.protect);

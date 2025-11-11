@@ -32,6 +32,10 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({ message: 'El token pertenece a un usuario que ya no existe.' });
         }
 
+        if (!user.activo) {
+            return res.status(401).json({ message: 'La cuenta ha sido eliminada o desactivada.' });
+        }
+
         req.user = user; // Adjuntar el objeto de usuario al request
         next(); // Continuar
         
