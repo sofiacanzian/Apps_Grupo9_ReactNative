@@ -8,9 +8,10 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.use(authMiddleware.protect);
 
 // Punto 8: Ver Historial (Filtro por fecha en Query Params)
+router.get('/', asistenciaController.getHistorial);
 router.get('/historial', asistenciaController.getHistorial);
 
-// Simulación de Check-in (Solo Admin/Instructor pueden registrar asistencias)
-router.post('/checkin', authMiddleware.restrictTo('admin', 'instructor'), asistenciaController.checkIn);
+// Simulación de Check-in mediante QR (cualquier usuario autenticado)
+router.post('/checkin', asistenciaController.checkIn);
 
 module.exports = router;

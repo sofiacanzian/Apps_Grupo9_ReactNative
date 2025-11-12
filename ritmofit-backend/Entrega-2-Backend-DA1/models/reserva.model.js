@@ -10,6 +10,11 @@ const Reserva = sequelize.define('Reserva', {
         primaryKey: true,
         autoIncrement: true,
     },
+    estado: {
+        type: DataTypes.ENUM('activa', 'cancelada', 'asistida', 'ausente', 'expirada'),
+        allowNull: false,
+        defaultValue: 'activa',
+    },
     fecha_reserva: {
         type: DataTypes.DATE,
         allowNull: false,

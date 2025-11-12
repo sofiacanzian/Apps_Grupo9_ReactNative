@@ -19,6 +19,18 @@ const Sede = sequelize.define('Sede', {
     telefono: {
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    latitud: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+    },
+    longitud: {
+        type: DataTypes.DECIMAL(10, 7),
+        allowNull: true,
+    },
+    disciplinas_ofrecidas: {
+        type: DataTypes.TEXT,
+        allowNull: true,
     }
 }, {
     tableName: 'sedes'

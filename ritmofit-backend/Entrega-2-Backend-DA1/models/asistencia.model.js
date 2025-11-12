@@ -21,6 +21,11 @@ const Asistencia = sequelize.define('Asistencia', {
     checkin_hora: {
         type: DataTypes.TIME,
         allowNull: true,
+    },
+    confirmado_por_qr: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true,
     }
 }, {
     tableName: 'asistencias'
