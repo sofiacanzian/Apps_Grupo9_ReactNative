@@ -6,30 +6,24 @@
   <component name="ChangeListManager">
     <list default="true" id="c522258a-c5d5-4671-903e-11cacd57c0c4" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/.env" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/asistencia.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/asistencia.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/auth.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/auth.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/clase.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/clase.controller.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/SETUP_GUIDE.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/SETUP_GUIDE.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/reserva.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/reserva.controller.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/user.controller.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/controllers/user.controller.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/middleware/auth.middleware.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/middleware/auth.middleware.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/asistencia.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/asistencia.model.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/clase.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/clase.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/reserva.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/reserva.model.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/sede.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/sede.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/user.model.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/models/user.model.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/node_modules/.package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/asistencia.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/asistencia.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/auth.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/auth.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/clase.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/clase.routes.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/user.routes.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/routes/user.routes.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/server.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-backend/Entrega-2-Backend-DA1/server.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-frontend/package-lock.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-frontend/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/.expo/types/router.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/.expo/types/router.d.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/app/_layout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/app/_layout.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/hooks/use-notifications-setup.ts" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/hooks/use-notifications-setup.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/src/services/notificationService.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/src/services/notificationService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/src/services/userService.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/src/services/userService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ritmofit-mobile/src/store/authStore.js" beforeDir="false" afterPath="$PROJECT_DIR$/ritmofit-mobile/src/store/authStore.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
