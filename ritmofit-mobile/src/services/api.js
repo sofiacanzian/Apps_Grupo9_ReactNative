@@ -24,6 +24,8 @@ const api = axios.create({
     headers: {
         'Content-Type': 'application/json',
     },
+    // Evita que las peticiones queden colgadas indefinidamente — fallan tras 10s
+    timeout: 10000,
 });
 
 // Interceptor para agregar token a cada solicitud
@@ -44,9 +46,24 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        // Si recibimos 401 forzamos logout
         if (error.response?.status === 401) {
             invokeLogout();
         }
+
+        // Detectar timeout o errores de red para dar feedback más claro en el cliente
+        if (error.code === 'ECONNABORTED') {
+            // timeout
+            console.warn('[api] request timeout', error.config?.url);
+            return Promise.reject(new Error('La petición tardó demasiado. Reintenta más tarde.'));
+        }
+
+        if (!error.response) {
+            // network / CORS / DNS
+            console.warn('[api] network error or no response for', error.config?.url, error.message);
+            return Promise.reject(new Error('No se pudo conectar con el servidor. Revisa tu conexión.'));
+        }
+
         return Promise.reject(error);
     }
 );

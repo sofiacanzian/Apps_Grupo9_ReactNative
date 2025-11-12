@@ -71,7 +71,7 @@ npm install
 ### 3.2 Ajusta `app.json`
 ```json
 "extra": {
-  "eas": { "projectId": "TU_PROJECT_ID_EXPO" }
+  "eas": { "projectId": "YOUR-EXPO-PROJECT-ID" }
 }
 ```
 Obtén el `projectId` en https://expo.dev → tu proyecto → Settings.
