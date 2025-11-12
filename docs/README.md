@@ -9,9 +9,7 @@ Para comenzar a usar la app, **lee la documentación en la carpeta `docs/`**:
 | Archivo | Descripción |
 |---------|-------------|
 | **`docs/SETUP_GUIDE.md`** | 🚀 **LEER PRIMERO** - Guía de instalación en 5 minutos |
-| **`docs/DOCUMENTATION_INDEX.md`** | 📚 Índice de toda la documentación |
-| **`docs/AUTH_TROUBLESHOOTING.md`** | 🐛 Solución de problemas |
-| **`docs/EMAIL_CONFIG.md`** | 📧 Configuración de emails OTP |
+| **(incluido en SETUP_GUIDE)** | 📚 Índice / Email / Troubleshooting / Seed |
 | **`docs/FINAL_CHECKLIST.md`** | ✅ Verificación de funcionalidades |
 | **`docs/CHANGELOG_AUTH.md`** | 📝 Cambios realizados en v2.0 |
 | **`docs/README_FINAL.md`** | 📄 Resumen completo del proyecto |
@@ -91,9 +89,7 @@ Tienes:
 ```
 docs/
 ├── SETUP_GUIDE.md              ← Comienza aquí
-├── DOCUMENTATION_INDEX.md      ← Índice de todo
-├── AUTH_TROUBLESHOOTING.md     ← Solución de problemas
-├── EMAIL_CONFIG.md             ← Emails
+├── (Integrado) Índice / Email / Troubleshooting / Seed
 ├── FINAL_CHECKLIST.md          ← Verificación
 ├── CHANGELOG_AUTH.md           ← Cambios
 └── README_FINAL.md             ← Resumen

@@ -508,3 +508,143 @@ const BASE_URL = 'http://10.0.2.2:3000/api'
 ---
 
 **¡Listo para usar! 🚀**
+
+---
+
+## 📧 Configuración de Envío de Emails (OTP)
+
+Esta sección consolida lo que antes estaba en `EMAIL_CONFIG.md`.
+
+### Credenciales en Backend `.env`
+
+```properties
+EMAIL_USER=uadepruebas@gmail.com
+EMAIL_PASS=zwgo douy dymm xqcz
+```
+
+Contraseña de aplicación (no la contraseña normal de Gmail).
+
+### Flujo OTP
+1. POST /api/auth/request-otp → genera y guarda código (válido 15 min, UI muestra 5 min)
+2. Envía email HTML con código de 6 dígitos
+3. Usuario ingresa código en pantalla ValidateOtp
+4. POST /api/auth/login-otp → valida y devuelve JWT + usuario
+
+### Verificar Envío
+Backend log debería mostrar: `✉️ OTP enviado a: correo@dominio.com`
+
+### Cambiar cuenta Gmail
+1. Crear "App Password" en Google (Seguridad → Contraseñas de aplicación)
+2. Reemplazar EMAIL_USER / EMAIL_PASS en `.env`
+3. Reiniciar backend
+
+### Testing Manual de Email (opcional)
+```javascript
+const nodemailer = require('nodemailer');
+require('dotenv').config();
+nodemailer.createTransport({
+  service: 'gmail', auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+}).sendMail({
+  from: process.env.EMAIL_USER,
+  to: 'tu_email@ejemplo.com',
+  subject: 'Test RitmoFit',
+  html: '<h1>Código: 123456</h1>'
+}, (err, info) => console.log(err ? err.message : info.response));
+```
+
+---
+
+## 🐛 Troubleshooting Autenticación (OTP)
+
+Esta sección reemplaza `AUTH_TROUBLESHOOTING.md`.
+
+### Problemas Comunes
+| Síntoma | Causa | Solución breve |
+|---------|-------|----------------|
+| No llega email | Gmail / Spam / credenciales | Revisar Spam, validar .env, reiniciar backend |
+| Error solicitar código | Backend caído / email inválido | Verificar `npm start`, formato email |
+| Código inválido | Caducado / distinto email | Reenviar, usar mismo email de solicitud |
+| No conecta | BASE_URL incorrecta | Confirmar `10.0.2.2` en emulador |
+
+### Checklist Rápido
+1. Backend corriendo y sin errores
+2. `.env` tiene EMAIL_USER / EMAIL_PASS válidos
+3. App apunta a `http://10.0.2.2:3000/api`
+4. Email válido ingresado
+5. Log muestra envío
+6. Código dentro de 5 minutos
+
+### Flujo Reintento
+1. Esperó >5 min → Reenviar
+2. Recibió 2 códigos → Usa último
+3. Falló 3 veces → Solicita nuevo
+
+### Regenerar Credenciales Gmail
+Seguridad → Contraseñas de aplicación → Generar → Copiar 16 chars → Actualizar `.env` → Reiniciar.
+
+### Variables Clave
+| Campo | Valor |
+|-------|-------|
+| Email Gmail | uadepruebas@gmail.com |
+| App Password | zwgo douy dymm xqcz |
+| OTP visible | 5 min UI |
+| OTP real | 15 min BD |
+| Formato | 6 dígitos numéricos |
+
+---
+
+## 🌱 Datos de Prueba (Seed de Catálogo)
+
+Esta sección integra `SEED_DATA_GUIDE.md`.
+
+### Contenido del Seed
+| Recurso | Cantidad |
+|---------|----------|
+| Sedes | 3 |
+| Instructores | 5 |
+| Clases (7 días) | 15 |
+
+### Ejecutar Seed
+```bash
+cd ritmofit-backend/Entrega-2-Backend-DA1
+npm run seed
+```
+
+### Verificar en App
+1. Backend activo
+2. Login OTP exitoso
+3. Ir a Home (Clases) → listar 15 clases
+4. Probar filtro por sede
+
+### Clases Incluidas (ejemplos)
+- Spinning Matutino / Power / Sunset
+- Yoga Flow / Restaurativo / Vinyasa
+- CrossFit Básico / Extremo
+- Pilates Matinal / Avanzado
+- Zumba Party / Toning
+- Box Fitness / Funcional Total / Stretching / Movilidad
+
+### Reset Total (opcional y destructivo)
+En `scripts/seedDatabase.js` cambiar:
+```javascript
+await sequelize.sync({ force: true }); // BORRA TODO
+```
+
+### Troubleshooting Seed
+| Problema | Acción |
+|----------|--------|
+| No veo clases | Correr seed / revisar logs backend |
+| Error MySQL | Ver credenciales `.env` / iniciar servicio |
+| Cupos incorrectos | Revisar definición en script |
+
+---
+
+## 📦 Documentación Consolidada
+
+Este archivo ahora incluye: Instalación, Email OTP, Troubleshooting y Seed.
+Documentos mantenidos fuera: `IMPLEMENTATION_SUMMARY.md`, `FINAL_CHECKLIST.md`, `CHANGELOG_AUTH.md`.
+
+---
+## 🧹 Migración de Documentos
+Eliminados: EMAIL_CONFIG.md, AUTH_TROUBLESHOOTING.md, README_FINAL.md, DOCUMENTATION_INDEX.md, ORGANIZATION_SUMMARY.md, SEED_DATA_GUIDE.md.
+
