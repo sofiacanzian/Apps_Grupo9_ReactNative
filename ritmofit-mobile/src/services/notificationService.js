@@ -1,5 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 const AndroidImportance = Notifications.AndroidImportance ?? Notifications.AndroidImportanceDefault;
 
@@ -97,7 +98,7 @@ export const scheduleReservationReminders = async (reservas, minutesBefore = 60)
                 body: `${clase.disciplina || 'Entrenamiento'} • ${clase.Sede?.nombre || 'RitmoFit'}`,
                 data: { reservaId: reserva.id, claseId: clase.id },
             },
-            trigger: triggerDate,
+            trigger: { type: 'date', date: triggerDate },
         });
     }).filter(Boolean);
 
@@ -122,7 +123,7 @@ export const scheduleClassReminder = async (reserva, minutesBefore = 60) => {
             body: `${clase.disciplina || 'Entrenamiento'} • ${clase.Sede?.nombre || 'RitmoFit'}`,
             data: { claseId: clase.id, reservaId: reserva.id },
         },
-        trigger: triggerDate,
+        trigger: { type: 'date', date: triggerDate },
     });
 };
 
@@ -142,4 +143,38 @@ export const cancelClassReminder = async (reservaId) => {
 
 export const clearAllReminders = async () => {
     await Notifications.cancelAllScheduledNotificationsAsync();
+};
+
+const resolveProjectId = () => {
+    return (
+        Constants?.expoConfig?.extra?.eas?.projectId ||
+        Constants?.expoConfig?.extra?.projectId ||
+        Constants?.manifest2?.extra?.eas?.projectId ||
+        Constants?.manifest?.extra?.eas?.projectId ||
+        process.env.EXPO_PROJECT_ID
+    );
+};
+
+export const getExpoPushTokenAsync = async () => {
+    const hasPermission = await requestNotificationPermission();
+    if (!hasPermission) return null;
+
+    if (Constants?.appOwnership === 'expo') {
+        console.warn('Expo Go no soporta push reales. Usa un development build para habilitarlas.');
+        return null;
+    }
+
+    const projectId = resolveProjectId();
+    if (!projectId) {
+        console.warn('No se pudo determinar el projectId de Expo. Configúralo en app.json (extra.eas.projectId).');
+        return null;
+    }
+
+    try {
+        const response = await Notifications.getExpoPushTokenAsync({ projectId });
+        return response?.data ?? null;
+    } catch (error) {
+        console.warn('No se pudo obtener el token push:', error?.message || error);
+        return null;
+    }
 };

@@ -19,4 +19,8 @@ router.put('/profile', userController.updateMe);
 router.post('/delete/request', userController.requestAccountDeletionOtp);
 router.post('/delete/confirm', userController.confirmAccountDeletion);
 
+// Registro de tokens push
+router.post('/push-token', userController.registerPushToken);
+router.delete('/push-token', userController.clearPushToken);
+
 module.exports = router;

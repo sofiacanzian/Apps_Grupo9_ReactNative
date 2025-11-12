@@ -119,3 +119,30 @@ exports.confirmAccountDeletion = async (req, res) => {
         return res.status(500).json({ message: error.message || 'Error interno del servidor.' });
     }
 };
+
+exports.registerPushToken = async (req, res) => {
+    const { expoPushToken } = req.body;
+    if (!expoPushToken) {
+        return res.status(400).json({ message: 'El token de Expo Push es obligatorio.' });
+    }
+
+    try {
+        req.user.expo_push_token = expoPushToken;
+        req.user.push_token_updated_at = new Date();
+        await req.user.save();
+        return res.status(200).json({ message: 'Token registrado correctamente.' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || 'Error interno del servidor.' });
+    }
+};
+
+exports.clearPushToken = async (req, res) => {
+    try {
+        req.user.expo_push_token = null;
+        req.user.push_token_updated_at = null;
+        await req.user.save();
+        return res.status(200).json({ message: 'Token eliminado.' });
+    } catch (error) {
+        return res.status(500).json({ message: error.message || 'Error interno del servidor.' });
+    }
+};

@@ -63,6 +63,14 @@ const User = sequelize.define('User', {
         type: DataTypes.DATEONLY,
         allowNull: true,
     },
+    expo_push_token: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
+    push_token_updated_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     activo: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

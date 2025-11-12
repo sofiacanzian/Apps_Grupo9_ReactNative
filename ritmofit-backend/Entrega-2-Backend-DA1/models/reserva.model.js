@@ -11,7 +11,8 @@ const Reserva = sequelize.define('Reserva', {
         autoIncrement: true,
     },
     estado: {
-        type: DataTypes.ENUM('activa', 'cancelada', 'asistida', 'ausente'),
+        type: DataTypes.ENUM('activa', 'cancelada', 'asistida', 'ausente', 'expirada'),
+        allowNull: false,
         defaultValue: 'activa',
     },
     fecha_reserva: {

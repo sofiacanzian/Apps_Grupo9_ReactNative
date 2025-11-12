@@ -3,6 +3,7 @@ const Reserva = require('../models/reserva.model');
 const Clase = require('../models/clase.model');
 const User = require('../models/user.model');
 const Sede = require('../models/sede.model');
+const { sendPushNotification } = require('../utils/push.service');
 
 const RESERVA_INCLUDE = [
     { model: User, attributes: ['id', 'nombre', 'email'] },
@@ -68,6 +69,20 @@ const detectOverlap = (targetRange, reservasUsuario) => {
     });
 };
 
+const notifyReservaEvent = async ({ expoToken, title, body, data }) => {
+    if (!expoToken) return;
+    try {
+        await sendPushNotification({
+            expoPushToken: expoToken,
+            title,
+            body,
+            data,
+        });
+    } catch (error) {
+        // Se loguea pero no se bloquea la request principal
+    }
+};
+
 /**
  * 1. Reservar una Clase (Solo Socio)
  */
@@ -106,6 +121,13 @@ exports.createReserva = async (req, res) => {
         const nuevaReserva = await Reserva.findByPk(reserva.id, { include: RESERVA_INCLUDE });
 
         res.status(201).json({ status: 'success', message: 'Reserva creada exitosamente.', data: hydrateReserva(nuevaReserva) });
+
+        notifyReservaEvent({
+            expoToken: req.user.expo_push_token,
+            title: 'Reserva confirmada',
+            body: `${clase.nombre} - ${clase.fecha} ${clase.hora_inicio}`,
+            data: { tipo: 'reserva', reservaId: reserva.id, claseId: clase.id },
+        });
     } catch (error) {
         res.status(400).json({ status: 'fail', message: error.message });
     }
@@ -188,6 +210,13 @@ exports.deleteReserva = async (req, res) => {
         await reserva.save();
 
         res.status(200).json({ status: 'success', message: 'Reserva cancelada correctamente.' });
+
+        notifyReservaEvent({
+            expoToken: req.user.expo_push_token,
+            title: 'Reserva cancelada',
+            body: 'Tu reserva fue cancelada correctamente.',
+            data: { tipo: 'reserva_cancelada', reservaId },
+        });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }

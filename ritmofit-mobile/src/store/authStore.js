@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as authService from '../services/authService';
-import { getUserProfile } from '../services/userService';
+import * as userService from '../services/userService';
 import { setToken, clearToken, registerLogout } from '../services/tokenManager';
 
 export const useAuthStore = create(
@@ -28,7 +28,12 @@ export const useAuthStore = create(
                 }
             },
 
-            logout: () => {
+            logout: async () => {
+                try {
+                    await userService.clearPushToken();
+                } catch (_err) {
+                    // ignore
+                }
                 authService.logout();
                 clearToken();
                 set({ token: null, user: null, error: null });
@@ -45,7 +50,7 @@ export const useAuthStore = create(
 
             refreshProfile: async () => {
                 try {
-                    const profile = await getUserProfile();
+                    const profile = await userService.getUserProfile();
                     set({ user: profile });
                     return profile;
                 } catch (err) {

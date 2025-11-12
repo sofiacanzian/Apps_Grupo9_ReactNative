@@ -50,6 +50,7 @@ RitmoFit es una aplicación móvil React Native que permite a los socios de un g
 - ✅ Historial de asistencias
 - ✅ Perfil personalizado
 - ✅ Logout seguro
+- ✅ Notificaciones push (Expo) + locales recordatorios
 
 ---
 

@@ -51,3 +51,19 @@ export const confirmAccountDeletion = async (otpCode) => {
         throw new Error(error.response?.data?.message || 'No se pudo eliminar la cuenta.');
     }
 };
+
+export const registerPushToken = async (expoPushToken) => {
+    try {
+        await api.post('/users/push-token', { expoPushToken });
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'No se pudo registrar el token push.');
+    }
+};
+
+export const clearPushToken = async () => {
+    try {
+        await api.delete('/users/push-token');
+    } catch (error) {
+        // opcional: ignorar
+    }
+};

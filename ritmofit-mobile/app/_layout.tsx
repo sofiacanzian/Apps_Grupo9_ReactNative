@@ -4,6 +4,7 @@ import 'react-native-reanimated';
 import { useAuthStore } from '../src/store/authStore';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useNotificationsSetup } from '@/hooks/use-notifications-setup';
+import { usePushRegistration } from '@/hooks/use-push-registration';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,6 +98,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated());
   useNotificationsSetup();
+  usePushRegistration();
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

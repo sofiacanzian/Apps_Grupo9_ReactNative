@@ -1,7 +1,6 @@
-# Ignorar todas las dependencias
-/ritmofit-frontend/node_modules
-/ritmofit-backend/node_modules
-/ritmofit-mobile/node_modules
+# Ignorar todas las dependencias (en cualquier subcarpeta)
+node_modules/
+**/node_modules/
 
 # Ignorar carpetas de compilación
 /ritmofit-frontend/dist
@@ -12,8 +11,10 @@
 /ritmofit-mobile/build
 
 # Archivos de configuración y secretos
-/ritmofit-backend/.env
-/ritmofit-mobile/.env
+.env
+**/.env
+/.env.local
+**/.env.local
 
 # Logs y caché de Expo
 /ritmofit-mobile/npm-debug.*
@@ -33,3 +34,9 @@
 # Archivos temporales de Windows
 Thumbs.db
 */Thumbs.db
+
+# Configuraciones locales de IDE
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/

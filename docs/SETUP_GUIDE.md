@@ -10,6 +10,7 @@
 | [📦 Requisitos Previos](#requisitos-previos) | Dependencias necesarias |
 | [🗄️ Base de Datos](#base-de-datos) | Crear y sincronizar la DB |
 | [📧 Emails OTP](#emails-otp) | Configuración y flujo de códigos |
+| [📳 Notificaciones Push](#push-notificaciones) | Expo Push + Dev Build |
 | [🔄 Flujo Autenticación](#flujo-autenticacion) | Diagrama paso a paso |
 | [📱 Pantallas](#pantallas) | Funcionalidades por vista |
 | [📊 Endpoints](#endpoints-backend) | Referencia rápida API |
@@ -136,7 +137,7 @@ npm start
 
 ---
 
-## � Emails OTP <a id="emails-otp"></a>
+## 📧 Emails OTP <a id="emails-otp"></a>
 
 ### Credenciales Actuales
 
@@ -158,6 +159,51 @@ El backend ya tiene configurado el envío de emails:
 Si no lo recibes:
 - Revisa carpeta **Spam**
 - Ve a: `AUTH_TROUBLESHOOTING.md`
+
+---
+
+## 📳 Notificaciones Push (Expo) <a id="push-notificaciones"></a>
+
+Las push reales sólo funcionan fuera de Expo Go. Sigue estos pasos:
+
+1. **Instala dependencias nativas**
+   ```bash
+   cd ritmofit-mobile
+   npx expo install expo-notifications expo-local-authentication expo-secure-store
+   ```
+2. **Define el `projectId`**
+   ```json
+   "extra": {
+     "eas": { "projectId": "TU_PROJECT_ID" }
+   }
+   ```
+   (lo ves en expo.dev → tu proyecto → General → Project ID).
+
+3. **Genera un Development Build**
+   ```bash
+   npx expo run:android   # o   npx expo run:ios
+   ```
+   Instálalo y usa esa app (no Expo Go).
+
+4. **Token secreto para el backend**
+   `.env`:
+   ```
+   EXPO_ACCESS_TOKEN=xxxxxxxxxxxxxxxxxxxx
+   ```
+   El backend lo usa para llamar a `https://exp.host/--/api/v2/push/send`.
+
+5. **Flujo en producción**
+   - Tras iniciar sesión, la app pide permisos y registra el `ExponentPushToken` mediante `POST /api/users/push-token`.
+   - Reservar una clase envía una push de confirmación.
+   - Cancelar una reserva dispara otra push.
+   - Al cerrar sesión se elimina el token (`DELETE /api/users/push-token`).
+
+6. **Verifica**
+   - Login en el build instalado.
+   - Reserva → llega push “Reserva confirmada”.
+   - Cancela → push “Reserva cancelada”.
+
+> Expo Go seguirá mostrando el warning; ignóralo o usa el development build.
 
 ---
 
@@ -356,7 +402,7 @@ POST /api/asistencias              (Check-in)
 
 ---
 
-## � Variables de Entorno <a id="variables-entorno"></a>
+## 🔐 Variables de Entorno <a id="variables-entorno"></a>
 
 ### Backend (.env)
 
@@ -379,19 +425,15 @@ JWT_EXPIRES_IN=7d
 # Email (OTP)
 EMAIL_USER=uadepruebas@gmail.com
 EMAIL_PASS=zwgo douy dymm xqcz
+
+# Push (Expo)
+EXPO_ACCESS_TOKEN=tu_token_de_expo
 ```
 
-### App (Hardcoded)
+### App
 
-Archivo: `ritmofit-mobile/src/services/api.js`
-
-```javascript
-// Android Emulator
-const BASE_URL = 'http://10.0.2.2:3000/api'
-
-// iOS Simulator / Web
-// const BASE_URL = 'http://localhost:3000/api'
-```
+- `ritmofit-mobile/app.json` → `extra.eas.projectId`
+- `src/services/api.js` → URL del backend (si cambia de IP)
 
 ---
 
