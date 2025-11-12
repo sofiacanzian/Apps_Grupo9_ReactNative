@@ -1,5 +1,30 @@
 # RitmoFit - Guía Completa de Instalación y Ejecución
 
+<div id="top"></div>
+
+## 🧭 Índice Rápido
+
+| Sección | Descripción |
+|---------|-------------|
+| [🚀 Inicio Rápido](#inicio-rapido) | Puesta en marcha en 5 minutos |
+| [📦 Requisitos Previos](#requisitos-previos) | Dependencias necesarias |
+| [🗄️ Base de Datos](#base-de-datos) | Crear y sincronizar la DB |
+| [📧 Emails OTP](#emails-otp) | Configuración y flujo de códigos |
+| [🔄 Flujo Autenticación](#flujo-autenticacion) | Diagrama paso a paso |
+| [📱 Pantallas](#pantallas) | Funcionalidades por vista |
+| [📊 Endpoints](#endpoints-backend) | Referencia rápida API |
+| [🔐 Variables Entorno](#variables-entorno) | Backend y app |
+| [🧪 Pruebas](#pruebas) | Casos recomendados |
+| [🐛 Troubleshooting](#troubleshooting) | Solución de problemas OTP |
+| [🌱 Seed Datos](#seed-datos) | Cargar catálogo de clases |
+| [📦 Características](#caracteristicas) | Estado actual |
+| [📧 Cambiar Gmail](#cambiar-gmail) | Regenerar credenciales |
+| [✅ Checklist OTP](#checklist-otp) | Validación rápida |
+
+> Tip: Usa Ctrl/Cmd + F y escribe el ancla (ej: `seed-datos`) si tu visor no soporta enlaces internos.
+
+---
+
 ## 📋 Descripción del Proyecto
 
 **RitmoFit** es una aplicación móvil React Native que permite a los socios de un gimnasio:
@@ -11,7 +36,7 @@
 
 ---
 
-## 🚀 Inicio Rápido (5 minutos)
+## 🚀 Inicio Rápido (5 minutos) <a id="inicio-rapido"></a>
 
 ### 1. Inicia el Backend
 
@@ -54,7 +79,7 @@ Local:   exp://10.0.2.2:8081
 
 ---
 
-## 📦 Requisitos Previos
+## 📦 Requisitos Previos <a id="requisitos-previos"></a>
 
 ### Sistema
 - **Windows 10/11** con PowerShell
@@ -81,7 +106,7 @@ mysql --version  # 8.0.0 o superior
 
 ---
 
-## 🗄️ Configuración de Base de Datos
+## 🗄️ Configuración de Base de Datos <a id="base-de-datos"></a>
 
 ### 1. Crear Base de Datos
 
@@ -111,7 +136,7 @@ npm start
 
 ---
 
-## 🔐 Configuración de Emails (OTP)
+## � Emails OTP <a id="emails-otp"></a>
 
 ### Credenciales Actuales
 
@@ -176,7 +201,7 @@ ritmofit-mobile/
 
 ---
 
-## 🔄 Flujo de Autenticación
+## 🔄 Flujo de Autenticación <a id="flujo-autenticacion"></a>
 
 ```
 ┌─────────────────────────┐
@@ -219,7 +244,7 @@ ritmofit-mobile/
 
 ---
 
-## 📊 Pantallas Disponibles
+## � Pantallas Disponibles <a id="pantallas"></a>
 
 ### 1️⃣ **RequestOtpScreen** (Solicitar Código)
 - Ingresa email
@@ -278,7 +303,7 @@ ritmofit-mobile/
 
 ---
 
-## 🛠️ Endpoints del Backend
+## � Endpoints del Backend <a id="endpoints-backend"></a>
 
 ### Autenticación
 ```
@@ -331,7 +356,7 @@ POST /api/asistencias              (Check-in)
 
 ---
 
-## 🔧 Variables de Entorno
+## � Variables de Entorno <a id="variables-entorno"></a>
 
 ### Backend (.env)
 
@@ -370,7 +395,7 @@ const BASE_URL = 'http://10.0.2.2:3000/api'
 
 ---
 
-## 📝 Pruebas Recomendadas
+## 🧪 Pruebas Recomendadas <a id="pruebas"></a>
 
 ### Test 1: Login Básico ✅
 ```
@@ -421,7 +446,7 @@ const BASE_URL = 'http://10.0.2.2:3000/api'
 
 ---
 
-## 🐛 Troubleshooting
+## 🐛 Troubleshooting <a id="troubleshooting"></a>
 
 ### Error: "Could not connect to backend"
 ```
@@ -462,7 +487,7 @@ const BASE_URL = 'http://10.0.2.2:3000/api'
 
 ---
 
-## ✨ Características Implementadas
+## 📦 Características Implementadas <a id="caracteristicas"></a>
 
 ### Delivery 2
 - ✅ Backend funcionando (endpoints OTP, clases, reservas, usuarios)
@@ -511,7 +536,7 @@ const BASE_URL = 'http://10.0.2.2:3000/api'
 
 ---
 
-## 📧 Configuración de Envío de Emails (OTP)
+## 📧 Configuración de Envío de Emails (OTP) <a id="emails-otp"></a>
 
 Esta sección consolida lo que antes estaba en `EMAIL_CONFIG.md`.
 
@@ -554,7 +579,7 @@ nodemailer.createTransport({
 
 ---
 
-## 🐛 Troubleshooting Autenticación (OTP)
+## 🐛 Troubleshooting Autenticación (OTP) <a id="troubleshooting"></a>
 
 Esta sección reemplaza `AUTH_TROUBLESHOOTING.md`.
 
@@ -593,7 +618,7 @@ Seguridad → Contraseñas de aplicación → Generar → Copiar 16 chars → Ac
 
 ---
 
-## 🌱 Datos de Prueba (Seed de Catálogo)
+## 🌱 Datos de Prueba (Seed de Catálogo) <a id="seed-datos"></a>
 
 Esta sección integra `SEED_DATA_GUIDE.md`.
 
@@ -646,5 +671,7 @@ Documentos mantenidos fuera: `IMPLEMENTATION_SUMMARY.md`, `FINAL_CHECKLIST.md`, 
 
 ---
 ## 🧹 Migración de Documentos
+
+<div align="right"><a href="#top">⬆ Volver arriba</a></div>
 Eliminados: EMAIL_CONFIG.md, AUTH_TROUBLESHOOTING.md, README_FINAL.md, DOCUMENTATION_INDEX.md, ORGANIZATION_SUMMARY.md, SEED_DATA_GUIDE.md.
 
