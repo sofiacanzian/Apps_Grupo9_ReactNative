@@ -34,8 +34,11 @@ const findUserByIdentifier = (identifier) => {
                 { email: identifier },
                 { username: identifier }
             ]
+            
         }
+        
     });
+    
 };
 
 /**
@@ -56,6 +59,7 @@ exports.requestOtp = async (req, res) => {
         
         const otpCode = generateOTP();
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos de ventana
+        
 
         // 1. Guardar el OTP de forma robusta en la base de datos
         const [updatedRows] = await User.update(
@@ -66,7 +70,9 @@ exports.requestOtp = async (req, res) => {
             },
             {
                 where: { id: user.id }
+                
             }
+            
         );
 
         if (updatedRows === 0) {
@@ -91,7 +97,7 @@ exports.requestOtp = async (req, res) => {
 };
 
 /**
- * Login tradicional con usuario/email + contraseña
+ * Login tradicional con usuario / email + contraseña
  */
 exports.loginWithPassword = async (req, res) => {
     const { identifier, password } = req.body;
@@ -378,7 +384,7 @@ exports.loginWithOtp = async (req, res) => {
         // 4. Generar JWT y limpiar el OTP
         const token = generateToken(user.id);
         
-        // Limpiar el código en la base de datos tras el uso
+        // Limpia el código en la base de datos despues de usarlo
         user.otp_code = null; 
         user.otp_expiration = null;
         user.otp_context = null;
