@@ -8,8 +8,10 @@ const { Op } = require('sequelize');
 
 /**
  * Endpoint para obtener el historial de asistencias (Punto 8).
- * Filtra por userId (el usuario logueado) y por rango de fechas.
+ * Filtra por userId (el usuario logueado) y por rango de fechas. 
  */
+
+
 exports.getHistorial = async (req, res) => {
     const userId = req.user.id; // Obtenido del token JWT
     const { fechaInicio, fechaFin } = req.query;
@@ -20,7 +22,7 @@ exports.getHistorial = async (req, res) => {
     if (fechaInicio || fechaFin) {
         whereCondition.fecha_asistencia = {};
         if (fechaInicio) {
-            // >= fechaInicio
+            // >= fechaInicio 
             whereCondition.fecha_asistencia[Op.gte] = new Date(fechaInicio); 
         }
         if (fechaFin) {
@@ -86,11 +88,14 @@ exports.checkIn = async (req, res) => {
             confirmado_por_qr: true,
         });
 
+        
         reservaActiva.estado = 'asistida';
         await reservaActiva.save();
 
+        
         res.status(201).json({ status: 'success', message: 'Check-in exitoso.', data: asistencia });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
     }
+    
 };
