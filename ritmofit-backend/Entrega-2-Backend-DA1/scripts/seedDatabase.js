@@ -1,5 +1,7 @@
 // scripts/seedDatabase.js
 // Script para poblar la base de datos con datos de prueba
+// ejecutable bd
+
 
 require('dotenv').config();
 const { sequelize } = require('../config/db.config');
@@ -34,6 +36,14 @@ const seedDatabase = async () => {
                 longitud: -58.419444,
                 disciplinas_ofrecidas: 'Zumba, Box, Funcional, Yoga'
             },
+             {
+                nombre: 'RitmoFit Villa Crespo',
+                direccion: 'Av.Juan B Justo 1252, Villa Crespo',
+                telefono: '011-4984-9586',
+                latitud: -34.588347,
+                longitud: -58.419123,
+                disciplinas_ofrecidas: 'HIT, Box, Funcional'
+            },
             {
                 nombre: 'RitmoFit Belgrano',
                 direccion: 'Av. Cabildo 2345, Belgrano',
@@ -45,7 +55,7 @@ const seedDatabase = async () => {
         ], { ignoreDuplicates: true });
         console.log(`✅ ${sedes.length} sedes creadas`);
 
-        // --- 2. CREAR INSTRUCTORES ---
+        // --- 2. Crea instructores ---
         console.log('\n👨‍🏫 Creando instructores...');
         const instructores = await User.bulkCreate([
             {
@@ -81,7 +91,7 @@ const seedDatabase = async () => {
         ], { ignoreDuplicates: true });
         console.log(`✅ ${instructores.length} instructores creados`);
 
-        // --- 3. CREAR CLASES (próximos 7 días) ---
+        // --- 3. Crea clases (próximos 7 días) ---
         console.log('\n🏋️ Creando clases...');
         
         const hoy = new Date();
