@@ -1,173 +1,168 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
-    TouchableOpacity,
-    ActivityIndicator,
-    Alert,
-    RefreshControl,
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { getReservas, cancelReserva } from '../../services/reservaService';
+import { getAsistencias } from '../../services/reservaService'; // Asegurate que esté exportado
 import { cancelClassReminder } from '../../services/notificationService';
 
 const estadoColors = {
-    activa: '#22c55e',
-    asistida: '#0ea5e9',
-    cancelada: '#ef4444',
-    ausente: '#94a3b8',
+  activa: '#22c55e',
+  asistida: '#0ea5e9',
+  cancelada: '#ef4444',
+  ausente: '#94a3b8',
 };
 
 export const ReservasScreen = () => {
-    const [reservas, setReservas] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [refreshing, setRefreshing] = useState(false);
-    const [tipo, setTipo] = useState('proximas');
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [tipo, setTipo] = useState('proximas');
 
-    useEffect(() => {
-        loadReservas();
-    }, [tipo]);
+  useEffect(() => {
+    loadItems();
+  }, [tipo]);
 
-    const loadReservas = async () => {
-        try {
-            if (!refreshing) {
-                setLoading(true);
-            }
-            const data = await getReservas({ tipo });
-            const lista = Array.isArray(data) ? data : [];
-            setReservas(lista);
-        } catch (error) {
-            Alert.alert('Error', error.message || 'Error al cargar reservas');
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
-        }
-    };
+  const loadItems = async () => {
+    try {
+      if (!refreshing) setLoading(true);
+      let data = [];
 
-    const handleCancelReserva = (reservaId, claseNombre) => {
-        Alert.alert(
-            'Cancelar Reserva',
-            `¿Estás seguro que deseas cancelar la reserva para ${claseNombre}?`,
-            [
-                { text: 'No', style: 'cancel' },
-                {
-                    text: 'Sí, cancelar',
-                    onPress: async () => {
-                        try {
-                            await cancelReserva(reservaId);
-                            await cancelClassReminder(reservaId);
-                            Alert.alert('Éxito', 'Reserva cancelada');
-                            loadReservas();
-                        } catch (error) {
-                            Alert.alert('Error', error.message || 'No se pudo cancelar la reserva');
-                        }
-                    },
-                    style: 'destructive',
-                },
-            ]
-        );
-    };
+      if (tipo === 'proximas') {
+        data = await getReservas({ tipo });
+      } else {
+        data = await getAsistencias(); // sin filtros para mostrar todo
+      }
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        loadReservas();
-    };
-
-    const renderReserva = ({ item }) => {
-        const clase = item.Clase ?? {};
-        const claseNombre = clase.nombre || item.clase_nombre || '—';
-        const fechaBase = clase.fecha || item.fecha || null;
-        const horaBase = clase.hora_inicio || item.horario || null;
-        const startDate = item.fecha_hora_inicio ? new Date(item.fecha_hora_inicio) :
-            (fechaBase && horaBase ? new Date(`${fechaBase}T${horaBase}`) : null);
-        const fecha = startDate && !Number.isNaN(startDate.getTime())
-            ? startDate.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
-            : fechaBase || '—';
-        const hora = startDate && !Number.isNaN(startDate.getTime())
-            ? startDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-            : horaBase || '—';
-        const sede = clase.Sede?.nombre || item.sede || '—';
-        const profesor = clase.instructor?.nombre || clase.User?.nombre || item.profesor || '—';
-        const disciplina = clase.disciplina || 'Entrenamiento';
-
-        return (
-            <View style={styles.reservaCard}>
-                <View style={styles.reservaHeader}>
-                    <View style={{ flex: 1 }}>
-                        <Text style={styles.reservaTitulo}>{claseNombre}</Text>
-                        <Text style={styles.reservaDisciplina}>{disciplina}</Text>
-                    </View>
-                    <View
-                        style={[
-                            styles.estadoBadge,
-                            { backgroundColor: estadoColors[item.estado] || '#3b82f6' },
-                        ]}
-                    >
-                        <Text style={styles.estadoText}>{item.estado || 'Pendiente'}</Text>
-                    </View>
-                </View>
-                <Text style={styles.reservaText}>📅 {fecha} - {hora}</Text>
-                <Text style={styles.reservaText}>📍 {sede}</Text>
-                <Text style={styles.reservaText}>👨‍🏫 Prof: {profesor}</Text>
-
-                {item.estado === 'activa' && tipo === 'proximas' && (
-                    <TouchableOpacity
-                        style={styles.cancelButton}
-                        onPress={() => handleCancelReserva(item.id, claseNombre)}
-                    >
-                        <Text style={styles.cancelButtonText}>Cancelar Reserva</Text>
-                    </TouchableOpacity>
-                )}
-            </View>
-        );
-    };
-
-    if (loading) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color="#3b82f6" />
-            </View>
-        );
+      setItems(Array.isArray(data?.data) ? data.data : []);
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Error al cargar datos');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadItems();
+  };
+
+  const handleCancelReserva = (reservaId, claseNombre) => {
+    Alert.alert(
+      'Cancelar Reserva',
+      `¿Estás seguro que deseas cancelar la reserva para ${claseNombre}?`,
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Sí, cancelar',
+          onPress: async () => {
+            try {
+              await cancelReserva(reservaId);
+              await cancelClassReminder(reservaId);
+              Alert.alert('Éxito', 'Reserva cancelada');
+              loadItems();
+            } catch (error) {
+              Alert.alert('Error', error.message || 'No se pudo cancelar la reserva');
+            }
+          },
+          style: 'destructive',
+        },
+      ]
+    );
+  };
+
+  const renderItem = ({ item }) => {
+    const clase = item.Clase ?? {};
+    const claseNombre = clase.nombre || item.clase_nombre || '—';
+    const fechaRaw = item.fecha_asistencia || clase.fecha || item.fecha || null;
+    const horaRaw = item.checkin_hora || clase.hora_inicio || item.horario || null;
+    const fecha = fechaRaw
+      ? new Date(fechaRaw).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' })
+      : '—';
+    const hora = horaRaw || '—';
+    const sede = clase.Sede?.nombre || item.sede || '—';
+    const profesor = clase.instructor?.nombre || clase.User?.nombre || item.profesor || '—';
+    const disciplina = clase.disciplina || 'Entrenamiento';
+    const estado = item.estado || (item.confirmado_por_qr ? 'asistida' : 'cancelada');
 
     return (
-        <View style={styles.container}>
-            <View style={styles.tabs}>
-                <TouchableOpacity
-                    style={[styles.tabButton, tipo === 'proximas' && styles.tabButtonActive]}
-                    onPress={() => setTipo('proximas')}
-                >
-                    <Text style={[styles.tabText, tipo === 'proximas' && styles.tabTextActive]}>Próximas</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tabButton, tipo === 'historial' && styles.tabButtonActive]}
-                    onPress={() => setTipo('historial')}
-                >
-                    <Text style={[styles.tabText, tipo === 'historial' && styles.tabTextActive]}>Historial</Text>
-                </TouchableOpacity>
-            </View>
-
-            {reservas.length > 0 ? (
-                <FlatList
-                    data={reservas}
-                    renderItem={renderReserva}
-                    keyExtractor={(item) => item.id.toString()}
-                    contentContainerStyle={styles.listContainer}
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                    }
-                />
-            ) : (
-                <View style={styles.centerContainer}>
-                    <Text style={styles.emptyText}>
-                        {tipo === 'proximas' ? 'No tienes reservas próximas' : 'No hay reservas en tu historial'}
-                    </Text>
-                    {tipo === 'proximas' && <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>}
-                </View>
-            )}
+      <View style={styles.reservaCard}>
+        <View style={styles.reservaHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reservaTitulo}>{claseNombre}</Text>
+            <Text style={styles.reservaDisciplina}>{disciplina}</Text>
+          </View>
+          <View style={[styles.estadoBadge, { backgroundColor: estadoColors[estado] || '#3b82f6' }]}>
+            <Text style={styles.estadoText}>{estado}</Text>
+          </View>
         </View>
+        <Text style={styles.reservaText}>📅 {fecha} - {hora}</Text>
+        <Text style={styles.reservaText}>📍 {sede}</Text>
+        <Text style={styles.reservaText}>👨‍🏫 Prof: {profesor}</Text>
+
+        {estado === 'activa' && tipo === 'proximas' && (
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={() => handleCancelReserva(item.id, claseNombre)}
+          >
+            <Text style={styles.cancelButtonText}>Cancelar Reserva</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#3b82f6" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.tabs}>
+        <TouchableOpacity
+          style={[styles.tabButton, tipo === 'proximas' && styles.tabButtonActive]}
+          onPress={() => setTipo('proximas')}
+        >
+          <Text style={[styles.tabText, tipo === 'proximas' && styles.tabTextActive]}>Próximas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tabButton, tipo === 'historial' && styles.tabButtonActive]}
+          onPress={() => setTipo('historial')}
+        >
+          <Text style={[styles.tabText, tipo === 'historial' && styles.tabTextActive]}>Historial</Text>
+        </TouchableOpacity>
+      </View>
+
+      {items.length > 0 ? (
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        />
+      ) : (
+        <View style={styles.centerContainer}>
+          <Text style={styles.emptyText}>
+            {tipo === 'proximas' ? 'No tienes reservas próximas' : 'No hay asistencias registradas'}
+          </Text>
+          {tipo === 'proximas' && <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>}
+        </View>
+      )}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
