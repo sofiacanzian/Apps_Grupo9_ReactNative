@@ -10,7 +10,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { getReservas, cancelReserva } from '../../services/reservaService';
-import { getAsistencias } from '../../services/reservaService'; // Asegurate que esté exportado
 import { cancelClassReminder } from '../../services/notificationService';
 
 const estadoColors = {
@@ -24,23 +23,15 @@ export const ReservasScreen = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [tipo, setTipo] = useState('proximas');
 
   useEffect(() => {
     loadItems();
-  }, [tipo]);
+  }, []);
 
   const loadItems = async () => {
     try {
       if (!refreshing) setLoading(true);
-      let data = [];
-
-      if (tipo === 'proximas') {
-        data = await getReservas({ tipo });
-      } else {
-        data = await getAsistencias(); // sin filtros para mostrar todo
-      }
-
+      const data = await getReservas({ tipo: 'proximas' });
       setItems(Array.isArray(data?.data) ? data.data : []);
     } catch (error) {
       Alert.alert('Error', error.message || 'Error al cargar datos');
@@ -108,7 +99,7 @@ export const ReservasScreen = () => {
         <Text style={styles.reservaText}>📍 {sede}</Text>
         <Text style={styles.reservaText}>👨‍🏫 Prof: {profesor}</Text>
 
-        {estado === 'activa' && tipo === 'proximas' && (
+        {estado === 'activa' && (
           <TouchableOpacity
             style={styles.cancelButton}
             onPress={() => handleCancelReserva(item.id, claseNombre)}
@@ -130,21 +121,6 @@ export const ReservasScreen = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tabButton, tipo === 'proximas' && styles.tabButtonActive]}
-          onPress={() => setTipo('proximas')}
-        >
-          <Text style={[styles.tabText, tipo === 'proximas' && styles.tabTextActive]}>Próximas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabButton, tipo === 'historial' && styles.tabButtonActive]}
-          onPress={() => setTipo('historial')}
-        >
-          <Text style={[styles.tabText, tipo === 'historial' && styles.tabTextActive]}>Historial</Text>
-        </TouchableOpacity>
-      </View>
-
       {items.length > 0 ? (
         <FlatList
           data={items}
@@ -155,10 +131,8 @@ export const ReservasScreen = () => {
         />
       ) : (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>
-            {tipo === 'proximas' ? 'No tienes reservas próximas' : 'No hay asistencias registradas'}
-          </Text>
-          {tipo === 'proximas' && <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>}
+          <Text style={styles.emptyText}>No tienes reservas próximas</Text>
+          <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>
         </View>
       )}
     </View>

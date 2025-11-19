@@ -67,6 +67,8 @@ const MainTabs = () => (
 
         if (route.name === "Home") {
           iconName = focused ? "home" : "home-outline";
+        } else if (route.name === "Historial") {
+          iconName = focused ? "alarm" : "alarm-outline";
         } else if (route.name === "Reservas") {
           iconName = focused ? "calendar" : "calendar-outline";
         } else if (route.name === "Qr") {
