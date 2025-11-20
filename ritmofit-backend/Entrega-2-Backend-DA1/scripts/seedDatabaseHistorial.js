@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { sequelize } = require('../config/db.config');
 const User = require('../models/user.model');
 const Clase = require('../models/clase.model');
@@ -12,6 +13,19 @@ const seedHistorial = async () => {
     await sequelize.sync({ force: false });
     console.log('✅ Modelos sincronizados');
 
+    // Obtener usuario con id 1
+    const usuario = await User.findByPk(1);
+    if (!usuario) {
+      console.error('❌ Usuario con id 1 no encontrado');
+      process.exit(1);
+    }
+
+    // Eliminar todas las asistencias del usuario 1
+    const deletedAsistencias = await Asistencia.destroy({
+      where: { userId: 1 }
+    });
+    console.log(`🗑️  Eliminadas ${deletedAsistencias} asistencias del usuario 1`);
+
     // Crear sede si no existe
     const sede = await Sede.findOrCreate({
       where: { nombre: 'RitmoFit Test' },
@@ -24,30 +38,31 @@ const seedHistorial = async () => {
       },
     });
 
-    // Crear usuario socio
-    const [socio] = await User.findOrCreate({
-      where: { email: 'socio@ritmofit.com' },
-      defaults: {
-        nombre: 'Santino Tester',
-        rol: 'socio',
-        email_verificado: true,
-      },
-    });
+    // Calcular fechas
+    const ahora = new Date();
+    
+    // Calificable: hace 2 horas (dentro de las 24 horas)
+    const fechaCalificable = new Date(ahora);
+    fechaCalificable.setHours(ahora.getHours() - 2);
+    const horaCalificable = fechaCalificable.toTimeString().split(' ')[0].substring(0, 5);
 
-    // Crear clases
-    const hoy = new Date();
-    const fechaAyer = new Date(hoy);
-    fechaAyer.setDate(hoy.getDate() - 1);
+    // Incalificable: hace 2 días (más de 24 horas pero menos de 1 mes)
+    const fechaIncalificable = new Date(ahora);
+    fechaIncalificable.setDate(ahora.getDate() - 2);
+    fechaIncalificable.setHours(10, 0, 0, 0); // 10:00 AM
 
-    const fechaVieja = new Date(hoy);
-    fechaVieja.setDate(hoy.getDate() - 3);
+    // Pasado el mes: hace 3 meses (más de 1 mes, solo aparece en "todos")
+    const fechaPasadoMes = new Date(ahora);
+    fechaPasadoMes.setMonth(ahora.getMonth() - 3);
+    fechaPasadoMes.setHours(18, 0, 0, 0); // 6:00 PM
 
-    const claseAyer = await Clase.create({
-      nombre: 'Yoga Flow Test',
+    // Crear clase calificable
+    const claseCalificable = await Clase.create({
+      nombre: 'calificable',
       disciplina: 'Yoga',
-      descripcion: 'Clase de yoga para probar historial',
-      fecha: fechaAyer.toISOString().split('T')[0],
-      hora_inicio: '10:00:00',
+      descripcion: 'Clase que puede ser calificada (dentro de 24 horas)',
+      fecha: fechaCalificable.toISOString().split('T')[0],
+      hora_inicio: horaCalificable + ':00',
       duracion_minutos: 60,
       cupo_maximo: 15,
       nivel: 'principiante',
@@ -55,41 +70,67 @@ const seedHistorial = async () => {
       instructorId: 1,
     });
 
-    const claseVieja = await Clase.create({
-      nombre: 'Funcional Power Test',
+    // Crear clase incalificable
+    const claseIncalificable = await Clase.create({
+      nombre: 'incalificable',
       disciplina: 'Funcional',
-      descripcion: 'Clase funcional para historial viejo',
-      fecha: fechaVieja.toISOString().split('T')[0],
-      hora_inicio: '18:00:00',
+      descripcion: 'Clase que no puede ser calificada (pasaron más de 24 horas)',
+      fecha: fechaIncalificable.toISOString().split('T')[0],
+      hora_inicio: '10:00:00',
       duracion_minutos: 50,
       cupo_maximo: 20,
       nivel: 'intermedio',
       sedeId: sede[0].id,
-      instructorId: 2,
+      instructorId: 1,
     });
 
-    // Crear asistencias
+    // Crear clase pasado el mes
+    const clasePasadoMes = await Clase.create({
+      nombre: 'pasado el mes',
+      disciplina: 'Pilates',
+      descripcion: 'Clase de hace 3 meses (solo aparece en "todos")',
+      fecha: fechaPasadoMes.toISOString().split('T')[0],
+      hora_inicio: '18:00:00',
+      duracion_minutos: 45,
+      cupo_maximo: 12,
+      nivel: 'avanzado',
+      sedeId: sede[0].id,
+      instructorId: 1,
+    });
+
+    // Crear asistencias para el usuario 1
     await Asistencia.bulkCreate([
       {
-        userId: socio.id,
-        claseId: claseAyer.id,
-        fecha_asistencia: fechaAyer.toISOString().split('T')[0],
-        checkin_hora: '10:05',
+        userId: 1,
+        claseId: claseCalificable.id,
+        fecha_asistencia: fechaCalificable.toISOString().split('T')[0],
+        checkin_hora: horaCalificable,
         confirmado_por_qr: true,
+        duracion_minutos: 60,
       },
       {
-        userId: socio.id,
-        claseId: claseVieja.id,
-        fecha_asistencia: fechaVieja.toISOString().split('T')[0],
+        userId: 1,
+        claseId: claseIncalificable.id,
+        fecha_asistencia: fechaIncalificable.toISOString().split('T')[0],
+        checkin_hora: '10:05',
+        confirmado_por_qr: true,
+        duracion_minutos: 50,
+      },
+      {
+        userId: 1,
+        claseId: clasePasadoMes.id,
+        fecha_asistencia: fechaPasadoMes.toISOString().split('T')[0],
         checkin_hora: '18:02',
         confirmado_por_qr: false,
+        duracion_minutos: 45,
       },
     ]);
 
     console.log('✅ Clases y asistencias creadas');
-    console.log(`👤 Usuario: ${socio.email}`);
-    console.log(`🧘 Clase calificable: ${claseAyer.nombre}`);
-    console.log(`⛔ Clase expirada: ${claseVieja.nombre}`);
+    console.log(`👤 Usuario: ${usuario.email || usuario.nombre || 'ID 1'}`);
+    console.log(`✅ Clase calificable: ${claseCalificable.nombre} (hace 2 horas)`);
+    console.log(`⛔ Clase incalificable: ${claseIncalificable.nombre} (hace 2 días)`);
+    console.log(`📅 Clase pasado el mes: ${clasePasadoMes.nombre} (hace 3 meses)`);
 
     process.exit(0);
   } catch (error) {
