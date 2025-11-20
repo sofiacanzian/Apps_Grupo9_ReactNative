@@ -23,10 +23,8 @@ const Calificacion = sequelize.define('Calificacion', {
 });
 
 // Relaciones
+// Solo definimos belongsTo para crear la clave foránea
 Calificacion.belongsTo(User, { foreignKey: 'userId', allowNull: false });
-User.hasMany(Calificacion, { foreignKey: 'userId' });
-
 Calificacion.belongsTo(Clase, { foreignKey: 'claseId', allowNull: false });
-Clase.hasMany(Calificacion, { foreignKey: 'claseId' });
 
 module.exports = Calificacion;

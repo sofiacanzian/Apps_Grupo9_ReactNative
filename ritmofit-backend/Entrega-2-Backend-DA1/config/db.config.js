@@ -20,17 +20,38 @@ const connectDB = async () => {
         
         // --- 1. CARGAR TODOS LOS MODELOS (SIN DUPLICIDADES) ---
         // Se cargan los modelos para que Sequelize sepa que existen
+        // Las relaciones se definen en cada modelo individual
         require('../models/user.model');
         require('../models/sede.model');      
         require('../models/clase.model');     
         require('../models/reserva.model');   
-        require('../models/asistencia.model'); 
+        require('../models/asistencia.model');
+        require('../models/objetivo.model');
+        require('../models/calificacion.model'); 
         
         // --- 2. SINCRONIZAR LA BASE DE DATOS (UNA SOLA VEZ) ---
-        // NOTA: Usar { alter: true } aplica cambios sin borrar datos. 
-        // Si tienes problemas, bórralo y usa await sequelize.sync();
-        await sequelize.sync({ alter: true }); 
-    console.log("✅ Modelos de tablas sincronizados con la base de datos.");
+        // Intentar sincronizar con alter primero
+        try {
+            await sequelize.sync({ alter: true });
+            console.log("✅ Modelos de tablas sincronizados con la base de datos.");
+        } catch (syncError) {
+            // Si hay error de "too many keys", sincronizar solo tablas nuevas sin alterar existentes
+            if (syncError.message.includes('too many keys') || syncError.message.includes('max 64 keys')) {
+                console.warn('⚠️  Advertencia: Error de índices detectado. Sincronizando solo tablas nuevas...');
+                try {
+                    // Sincronizar solo el modelo Objetivo que es nuevo
+                    const Objetivo = require('../models/objetivo.model');
+                    await Objetivo.sync({ alter: false });
+                    console.log("✅ Tabla objetivos creada/verificada.");
+                    console.log("⚠️  Nota: Algunas tablas existentes no se alteraron debido a límites de índices.");
+                } catch (syncError2) {
+                    console.warn('⚠️  No se pudo crear la tabla objetivos. Puede que ya exista.');
+                    console.warn('   Error:', syncError2.message);
+                }
+            } else {
+                throw syncError;
+            }
+        }
         
     } catch (error) {
         console.error('❌ Error al conectar/sincronizar la base de datos:', error.message);

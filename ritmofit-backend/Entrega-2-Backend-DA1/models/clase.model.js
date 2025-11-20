@@ -54,10 +54,8 @@ const Clase = sequelize.define('Clase', {
 // Relaciones:
 // 1. Una Clase pertenece a una Sede (Clave foránea: sedeId)
 Clase.belongsTo(Sede, { foreignKey: 'sedeId', allowNull: false });
-Sede.hasMany(Clase, { foreignKey: 'sedeId' });
 
 // 2. Una Clase tiene un Instructor (Clave foránea: instructorId, apunta a la tabla User)
 Clase.belongsTo(User, { foreignKey: 'instructorId', allowNull: false, as: 'instructor' }); // User actúa como Instructor
-User.hasMany(Clase, { foreignKey: 'instructorId', as: 'clasesImpartidas' });
 
 module.exports = Clase;

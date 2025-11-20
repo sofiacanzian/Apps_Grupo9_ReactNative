@@ -27,10 +27,8 @@ const Reserva = sequelize.define('Reserva', {
 // Relaciones:
 // 1. Una Reserva pertenece a un Usuario (Socio)
 Reserva.belongsTo(User, { foreignKey: 'userId', allowNull: false });
-User.hasMany(Reserva, { foreignKey: 'userId' });
 
 // 2. Una Reserva pertenece a una Clase
 Reserva.belongsTo(Clase, { foreignKey: 'claseId', allowNull: false });
-Clase.hasMany(Reserva, { foreignKey: 'claseId' });
 
 module.exports = Reserva;

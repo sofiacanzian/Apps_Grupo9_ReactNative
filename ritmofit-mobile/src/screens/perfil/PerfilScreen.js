@@ -18,6 +18,12 @@ import {
     requestAccountDeletionOtp,
     confirmAccountDeletion,
 } from '../../services/userService';
+import {
+    getObjetivos,
+    createObjetivo,
+    updateObjetivo,
+    deleteObjetivo,
+} from '../../services/objetivoService';
 import { clearCredentials } from '../../services/credentialStorage';
 import { useAuthStore } from '../../store/authStore';
 
@@ -45,8 +51,19 @@ export const PerfilScreen = () => {
     const [requestingDeletion, setRequestingDeletion] = useState(false);
     const [confirmingDeletion, setConfirmingDeletion] = useState(false);
 
+    // Estados para objetivos
+    const [objetivos, setObjetivos] = useState([]);
+    const [loadingObjetivos, setLoadingObjetivos] = useState(false);
+    const [objetivoModalVisible, setObjetivoModalVisible] = useState(false);
+    const [editingObjetivo, setEditingObjetivo] = useState(null);
+    const [cantidadClases, setCantidadClases] = useState('');
+    const [disciplina, setDisciplina] = useState('');
+    const [duracionPeriodo, setDuracionPeriodo] = useState('');
+    const [savingObjetivo, setSavingObjetivo] = useState(false);
+
     useEffect(() => {
         loadProfile();
+        loadObjetivos();
     }, []);
 
     const loadProfile = async () => {
@@ -177,6 +194,112 @@ export const PerfilScreen = () => {
         }
     };
 
+    // Funciones para objetivos
+    const loadObjetivos = async () => {
+        try {
+            setLoadingObjetivos(true);
+            const data = await getObjetivos();
+            setObjetivos(Array.isArray(data) ? data : []);
+        } catch (error) {
+            console.error('Error cargando objetivos:', error);
+        } finally {
+            setLoadingObjetivos(false);
+        }
+    };
+
+    const abrirModalObjetivo = (objetivo = null) => {
+        if (objetivo) {
+            setEditingObjetivo(objetivo);
+            setCantidadClases(objetivo.cantidad_clases.toString());
+            setDisciplina(objetivo.disciplina);
+            setDuracionPeriodo(objetivo.duracion_periodo);
+        } else {
+            setEditingObjetivo(null);
+            setCantidadClases('');
+            setDisciplina('');
+            setDuracionPeriodo('');
+        }
+        setObjetivoModalVisible(true);
+    };
+
+    const cerrarModalObjetivo = () => {
+        setObjetivoModalVisible(false);
+        setEditingObjetivo(null);
+        setCantidadClases('');
+        setDisciplina('');
+        setDuracionPeriodo('');
+    };
+
+    const handleSaveObjetivo = async () => {
+        if (!cantidadClases || !disciplina || !duracionPeriodo) {
+            Alert.alert('Campos incompletos', 'Completa todos los campos.');
+            return;
+        }
+
+        const cantidad = parseInt(cantidadClases);
+        if (isNaN(cantidad) || cantidad < 1) {
+            Alert.alert('Cantidad inválida', 'Ingresa un número válido de clases.');
+            return;
+        }
+
+        try {
+            setSavingObjetivo(true);
+            if (editingObjetivo) {
+                await updateObjetivo(editingObjetivo.id, {
+                    cantidad_clases: cantidad,
+                    disciplina,
+                    duracion_periodo: duracionPeriodo,
+                });
+                Alert.alert('Éxito', 'Objetivo actualizado correctamente.');
+            } else {
+                await createObjetivo({
+                    cantidad_clases: cantidad,
+                    disciplina,
+                    duracion_periodo: duracionPeriodo,
+                });
+                Alert.alert('Éxito', 'Objetivo creado correctamente.');
+            }
+            cerrarModalObjetivo();
+            loadObjetivos();
+        } catch (error) {
+            Alert.alert('Error', error.message || 'No se pudo guardar el objetivo.');
+        } finally {
+            setSavingObjetivo(false);
+        }
+    };
+
+    const handleDeleteObjetivo = (objetivo) => {
+        Alert.alert(
+            'Eliminar objetivo',
+            `¿Estás seguro de que deseas eliminar este objetivo?`,
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deleteObjetivo(objetivo.id);
+                            Alert.alert('Éxito', 'Objetivo eliminado correctamente.');
+                            loadObjetivos();
+                        } catch (error) {
+                            Alert.alert('Error', error.message || 'No se pudo eliminar el objetivo.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const getProgressColor = (porcentaje, completado) => {
+        if (completado) return '#16a34a'; // Verde cuando está completo
+        if (porcentaje >= 80) return '#fbbf24'; // Amarillo cuando está cerca
+        return '#3b82f6'; // Azul normal
+    };
+
+    const disciplinas = ['Box', 'Pilates', 'Spinning', 'CrossFit', 'Zumba', 'Yoga'];
+    const periodos = ['semana', 'mes', '6 meses', '12 meses'];
+
     if (loading) {
         return (
             <View style={styles.centerContainer}>
@@ -241,6 +364,178 @@ export const PerfilScreen = () => {
                     {requestingDeletion ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteButtonText}>Eliminar cuenta</Text>}
                 </TouchableOpacity>
             </View>
+
+            {/* Sección de Objetivos */}
+            <View style={styles.objetivosContainer}>
+                <View style={styles.objetivosHeader}>
+                    <Text style={styles.objetivosTitle}>Objetivos</Text>
+                    <TouchableOpacity
+                        style={styles.addObjetivoButton}
+                        onPress={() => abrirModalObjetivo()}
+                    >
+                        <Text style={styles.addObjetivoText}>+ Nuevo</Text>
+                    </TouchableOpacity>
+                </View>
+
+                {loadingObjetivos ? (
+                    <ActivityIndicator size="small" color="#3b82f6" style={{ marginVertical: 20 }} />
+                ) : objetivos.length === 0 ? (
+                    <Text style={styles.emptyObjetivosText}>No tienes objetivos aún. ¡Crea uno para comenzar!</Text>
+                ) : (
+                    objetivos.map((objetivo) => {
+                        const progreso = objetivo.progreso || { clasesAsistidas: 0, clasesObjetivo: objetivo.cantidad_clases, porcentaje: 0, completado: false };
+                        const porcentaje = progreso.porcentaje || 0;
+                        const completado = progreso.completado || false;
+                        const color = getProgressColor(porcentaje, completado);
+                        const fechaFin = new Date(objetivo.fecha_fin);
+                        const diasRestantes = Math.ceil((fechaFin - new Date()) / (1000 * 60 * 60 * 24));
+
+                        return (
+                            <View key={objetivo.id} style={styles.objetivoCard}>
+                                <View style={styles.objetivoHeader}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.objetivoDisciplina}>{objetivo.disciplina}</Text>
+                                        <Text style={styles.objetivoMeta}>
+                                            Ir a {objetivo.cantidad_clases} clases durante {objetivo.duracion_periodo}
+                                        </Text>
+                                        {diasRestantes > 0 && (
+                                            <Text style={styles.objetivoDiasRestantes}>
+                                                {diasRestantes} {diasRestantes === 1 ? 'día' : 'días'} restantes
+                                            </Text>
+                                        )}
+                                    </View>
+                                    {completado && (
+                                        <View style={styles.completadoBadge}>
+                                            <Text style={styles.completadoText}>✓ Completado</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                <View style={styles.progressContainer}>
+                                    <View style={styles.progressBarContainer}>
+                                        <View
+                                            style={[
+                                                styles.progressBar,
+                                                { width: `${Math.min(100, porcentaje)}%`, backgroundColor: color },
+                                            ]}
+                                        />
+                                    </View>
+                                    <Text style={styles.progressText}>
+                                        {progreso.clasesAsistidas} de {progreso.clasesObjetivo} clases ({porcentaje}%)
+                                    </Text>
+                                </View>
+
+                                <View style={styles.objetivoActions}>
+                                    <TouchableOpacity
+                                        style={styles.editObjetivoButton}
+                                        onPress={() => abrirModalObjetivo(objetivo)}
+                                    >
+                                        <Text style={styles.editObjetivoText}>Editar</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.deleteObjetivoButton}
+                                        onPress={() => handleDeleteObjetivo(objetivo)}
+                                    >
+                                        <Text style={styles.deleteObjetivoText}>Eliminar</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        );
+                    })
+                )}
+            </View>
+
+            {/* Modal para crear/editar objetivo */}
+            <Modal
+                visible={objetivoModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={cerrarModalObjetivo}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalCard}>
+                        <Text style={styles.modalTitle}>
+                            {editingObjetivo ? 'Editar Objetivo' : 'Nuevo Objetivo'}
+                        </Text>
+
+                        <Text style={styles.label}>Ir a</Text>
+                        <TextInput
+                            style={styles.input}
+                            keyboardType="numeric"
+                            placeholder="Cantidad de clases"
+                            value={cantidadClases}
+                            onChangeText={setCantidadClases}
+                        />
+
+                        <Text style={styles.label}>Clases de</Text>
+                        <View style={styles.selectContainer}>
+                            {disciplinas.map((disc) => (
+                                <TouchableOpacity
+                                    key={disc}
+                                    style={[
+                                        styles.selectOption,
+                                        disciplina === disc && styles.selectOptionActive,
+                                    ]}
+                                    onPress={() => setDisciplina(disc)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.selectOptionText,
+                                            disciplina === disc && styles.selectOptionTextActive,
+                                        ]}
+                                    >
+                                        {disc}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <Text style={styles.label}>Durante</Text>
+                        <View style={styles.selectContainer}>
+                            {periodos.map((periodo) => (
+                                <TouchableOpacity
+                                    key={periodo}
+                                    style={[
+                                        styles.selectOption,
+                                        duracionPeriodo === periodo && styles.selectOptionActive,
+                                    ]}
+                                    onPress={() => setDuracionPeriodo(periodo)}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.selectOptionText,
+                                            duracionPeriodo === periodo && styles.selectOptionTextActive,
+                                        ]}
+                                    >
+                                        {periodo}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        <View style={styles.modalActions}>
+                            <TouchableOpacity
+                                style={styles.modalCancel}
+                                onPress={cerrarModalObjetivo}
+                                disabled={savingObjetivo}
+                            >
+                                <Text style={styles.modalCancelText}>Cancelar</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.modalConfirmBlue, savingObjetivo && styles.modalConfirmDisabled]}
+                                onPress={handleSaveObjetivo}
+                                disabled={savingObjetivo}
+                            >
+                                {savingObjetivo ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.modalConfirmText}>Guardar</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
 
             <Modal visible={deleteModalVisible} transparent animationType="fade" onRequestClose={() => setDeleteModalVisible(false)}>
                 <View style={styles.modalOverlay}>
@@ -437,11 +732,181 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
         alignItems: 'center',
     },
+    modalConfirmBlue: {
+        flex: 1,
+        backgroundColor: '#3b82f6',
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: 'center',
+        /* ligero sombreado para destacar */
+        shadowColor: '#3b82f6',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 4,
+    },
     modalConfirmDisabled: {
         opacity: 0.6,
     },
     modalConfirmText: {
         color: '#fff',
         fontWeight: '700',
+    },
+    // Estilos de Objetivos
+    objetivosContainer: {
+        backgroundColor: '#fff',
+        padding: 20,
+        borderRadius: 12,
+        margin: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    objetivosHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    objetivosTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#2c3e50',
+    },
+    addObjetivoButton: {
+        backgroundColor: '#3b82f6',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    addObjetivoText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    emptyObjetivosText: {
+        textAlign: 'center',
+        color: '#7f8c8d',
+        fontSize: 14,
+        marginVertical: 20,
+    },
+    objetivoCard: {
+        backgroundColor: '#f9fafb',
+        borderRadius: 8,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
+    },
+    objetivoHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+    },
+    objetivoDisciplina: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1f2937',
+        marginBottom: 4,
+    },
+    objetivoMeta: {
+        fontSize: 14,
+        color: '#6b7280',
+        marginBottom: 4,
+    },
+    objetivoDiasRestantes: {
+        fontSize: 12,
+        color: '#9ca3af',
+        fontStyle: 'italic',
+    },
+    completadoBadge: {
+        backgroundColor: '#16a34a',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    completadoText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    progressContainer: {
+        marginBottom: 12,
+    },
+    progressBarContainer: {
+        height: 12,
+        backgroundColor: '#e5e7eb',
+        borderRadius: 6,
+        overflow: 'hidden',
+        marginBottom: 8,
+    },
+    progressBar: {
+        height: '100%',
+        borderRadius: 6,
+        transition: 'width 0.3s ease',
+    },
+    progressText: {
+        fontSize: 13,
+        color: '#374151',
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    objetivoActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    editObjetivoButton: {
+        flex: 1,
+        backgroundColor: '#3b82f6',
+        paddingVertical: 8,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    editObjetivoText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    deleteObjetivoButton: {
+        flex: 1,
+        backgroundColor: '#ef4444',
+        paddingVertical: 8,
+        borderRadius: 6,
+        alignItems: 'center',
+    },
+    deleteObjetivoText: {
+        color: '#fff',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    selectContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 16,
+    },
+    selectOption: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: '#d1d5db',
+        backgroundColor: '#fff',
+    },
+    selectOptionActive: {
+        backgroundColor: '#3b82f6',
+        borderColor: '#3b82f6',
+    },
+    selectOptionText: {
+        fontSize: 14,
+        color: '#374151',
+        fontWeight: '500',
+    },
+    selectOptionTextActive: {
+        color: '#fff',
+        fontWeight: '600',
     },
 });
