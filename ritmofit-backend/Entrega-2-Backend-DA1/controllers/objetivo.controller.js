@@ -26,6 +26,43 @@ const calcularFechaFin = (fechaInicio, duracionPeriodo) => {
     return fecha;
 };
 
+// Obtener inicio de período apropiado según duracion
+const obtenerInicioPeriodo = (fechaReferencia, duracionPeriodo) => {
+    const fecha = new Date(fechaReferencia);
+    switch (duracionPeriodo) {
+        case 'semana': {
+            // empezar el lunes de la semana actual
+            const dia = fecha.getDay(); // 0 Domingo .. 6 Sab
+            const diffToMonday = (dia === 0) ? -6 : (1 - dia);
+            const inicio = new Date(fecha);
+            inicio.setDate(fecha.getDate() + diffToMonday);
+            inicio.setHours(0,0,0,0);
+            return inicio;
+        }
+        case 'mes': {
+            const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+            inicio.setHours(0,0,0,0);
+            return inicio;
+        }
+        case '6 meses': {
+            const inicio = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+            inicio.setMonth(inicio.getMonth() - 5);
+            inicio.setHours(0,0,0,0);
+            return inicio;
+        }
+        case '12 meses': {
+            const inicio = new Date(fecha.getFullYear(), 0, 1);
+            inicio.setHours(0,0,0,0);
+            return inicio;
+        }
+        default: {
+            const inicio = new Date(fecha);
+            inicio.setHours(0,0,0,0);
+            return inicio;
+        }
+    }
+};
+
 // Crear un nuevo objetivo
 exports.createObjetivo = async (req, res) => {
     try {
@@ -53,7 +90,8 @@ exports.createObjetivo = async (req, res) => {
             });
         }
 
-        const fechaInicio = new Date();
+        // Ajustar inicio del período para que incluya las clases pasadas dentro del mismo periodo
+        const fechaInicio = obtenerInicioPeriodo(new Date(), duracion_periodo);
         const fechaFin = calcularFechaFin(fechaInicio, duracion_periodo);
 
         const objetivo = await Objetivo.create({
@@ -102,13 +140,16 @@ exports.getUserObjetivos = async (req, res) => {
 // Calcular progreso de un objetivo
 const calcularProgreso = async (objetivo) => {
     try {
-        // Obtener todas las asistencias del usuario en el rango de fechas
+        // Obtener todas las asistencias del usuario en el rango de fechas (usar DATEONLY strings)
+        const fechaInicioOnly = new Date(objetivo.fecha_inicio).toISOString().split('T')[0];
+        const fechaFinOnly = new Date(objetivo.fecha_fin).toISOString().split('T')[0];
+
         const asistencias = await Asistencia.findAll({
             where: {
                 userId: objetivo.userId,
                 fecha_asistencia: {
-                    [Op.gte]: objetivo.fecha_inicio,
-                    [Op.lte]: objetivo.fecha_fin,
+                    [Op.gte]: fechaInicioOnly,
+                    [Op.lte]: fechaFinOnly,
                 },
             },
             include: [{
@@ -117,10 +158,13 @@ const calcularProgreso = async (objetivo) => {
             }],
         });
 
-        // Filtrar por disciplina
-        const clasesAsistidas = asistencias.filter(
-            (asistencia) => asistencia.Clase && asistencia.Clase.disciplina === objetivo.disciplina
-        ).length;
+        // Filtrar por disciplina (case-insensitive) y usar comparación de fechas DATEONLY
+        const objetivoDisc = (objetivo.disciplina || '').toString().toLowerCase();
+
+        const clasesAsistidas = asistencias.filter((asistencia) => {
+            const claseDisc = (asistencia.Clase?.disciplina || '').toString().toLowerCase();
+            return claseDisc === objetivoDisc;
+        }).length;
 
         const porcentaje = objetivo.cantidad_clases > 0 
             ? Math.min(100, Math.round((clasesAsistidas / objetivo.cantidad_clases) * 100))

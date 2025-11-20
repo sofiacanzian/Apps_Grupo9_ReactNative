@@ -390,8 +390,11 @@ export const PerfilScreen = () => {
                         const fechaFin = new Date(objetivo.fecha_fin);
                         const diasRestantes = Math.ceil((fechaFin - new Date()) / (1000 * 60 * 60 * 24));
 
+                        const faltantes = (objetivo.cantidad_clases || 0) - (progreso.clasesAsistidas || 0);
+                        const nearComplete = !completado && faltantes > 0 && faltantes <= 2;
+
                         return (
-                            <View key={objetivo.id} style={styles.objetivoCard}>
+                            <View key={objetivo.id} style={[styles.objetivoCard, nearComplete && styles.nearCompleteGlow]}>
                                 <View style={styles.objetivoHeader}>
                                     <View style={{ flex: 1 }}>
                                         <Text style={styles.objetivoDisciplina}>{objetivo.disciplina}</Text>
@@ -402,6 +405,11 @@ export const PerfilScreen = () => {
                                             <Text style={styles.objetivoDiasRestantes}>
                                                 {diasRestantes} {diasRestantes === 1 ? 'día' : 'días'} restantes
                                             </Text>
+                                        )}
+                                        {nearComplete && (
+                                            <View style={styles.casiBadge}>
+                                                <Text style={styles.casiBadgeText}>Casi! solo falt{faltantes === 1 ? 'a' : 'an'} {faltantes} </Text>
+                                            </View>
                                         )}
                                     </View>
                                     {completado && (
@@ -738,7 +746,6 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingVertical: 12,
         alignItems: 'center',
-        /* ligero sombreado para destacar */
         shadowColor: '#3b82f6',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.15,
@@ -752,7 +759,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '700',
     },
-    // Estilos de Objetivos
     objetivosContainer: {
         backgroundColor: '#fff',
         padding: 20,
@@ -908,5 +914,27 @@ const styles = StyleSheet.create({
     selectOptionTextActive: {
         color: '#fff',
         fontWeight: '600',
+    },
+    nearCompleteGlow: {
+        borderColor: '#f59e0b',
+        borderWidth: 2,
+        shadowColor: '#f59e0b',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    casiBadge: {
+        marginTop: 6,
+        alignSelf: 'flex-start',
+        backgroundColor: '#f59e0b',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    casiBadgeText: {
+        color: '#fff',
+        fontWeight: '700',
+        fontSize: 12,
     },
 });
