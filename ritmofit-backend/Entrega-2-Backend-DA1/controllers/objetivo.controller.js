@@ -1,10 +1,8 @@
-// controllers/objetivo.controller.js
 const Objetivo = require('../models/objetivo.model');
 const Asistencia = require('../models/asistencia.model');
 const Clase = require('../models/clase.model');
 const { Op } = require('sequelize');
 
-// Calcular fecha de fin según duración del período
 const calcularFechaFin = (fechaInicio, duracionPeriodo) => {
     const fecha = new Date(fechaInicio);
     switch (duracionPeriodo) {
@@ -278,7 +276,7 @@ exports.updateObjetivo = async (req, res) => {
     }
 };
 
-// Eliminar (desactivar) un objetivo
+// esta funcion no elimina el objetivo de la base de datos, simplemente lo marca como inactivo tal vez eso genere problemas a futuro
 exports.deleteObjetivo = async (req, res) => {
     try {
         const userId = req.user.id;

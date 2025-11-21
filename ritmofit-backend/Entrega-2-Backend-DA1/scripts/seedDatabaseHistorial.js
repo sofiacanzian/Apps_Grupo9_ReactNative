@@ -55,16 +55,16 @@ const seedHistorial = async () => {
 
     const addDays = (d, days) => { const n = new Date(d); n.setDate(d.getDate() + days); return n; };
 
-    // Yoga: algunas pasadas y algunas próximas
+    // Yoga
     const yoga1 = addDays(hoy, -1);
     const yoga2 = addDays(hoy, -3);
-    const yoga3 = addDays(hoy, 5);
-    const yoga4 = addDays(hoy, 10);
+    const yoga3 = addDays(hoy, -8);
+    const yoga4 = addDays(hoy, -10);
 
-    // Box: usar la etiqueta "Box" para coincidir con enum de Objetivo
-    const box1 = addDays(hoy, 8);
-    const box2 = addDays(hoy, 12);
-    const box3 = addDays(hoy, 15);
+    // Box si no se usa la palabra Box no lo reconoce, despues se podria cambiar.
+    const box1 = addDays(hoy, -8);
+    const box2 = addDays(hoy, -12);
+    const box3 = addDays(hoy, -15);
 
     console.log('   → Yoga fechas:', getISODate(yoga1), getISODate(yoga2), getISODate(yoga3), getISODate(yoga4));
     console.log('   → Box fechas:', getISODate(box1), getISODate(box2), getISODate(box3));
@@ -138,7 +138,7 @@ const seedHistorial = async () => {
     // PILATES (10 clases distribuidas en el año)
     // =========================
     console.log('\n🤸 Creando 10 clases de Pilates repartidas por el año...');
-    const pilatesOffsets = [-330, -270, -210, -150, -90, -30, 0, 30, 90, 180];
+    const pilatesOffsets = [-330, -270, -210, -150, -90, -30, -20, -18, -9, 0];
     const pilatesClasesData = pilatesOffsets.map((offs, i) => ({
       fecha: addDays(hoy, offs),
       nombre: `Pilates Serie ${i + 1} — Fortalecimiento y movilidad`,

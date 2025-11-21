@@ -414,7 +414,7 @@ export const PerfilScreen = () => {
                                     </View>
                                     {completado && (
                                         <View style={styles.completadoBadge}>
-                                            <Text style={styles.completadoText}>✓ Completado</Text>
+                                            <Text style={styles.completadoText}>Completado!</Text>
                                         </View>
                                     )}
                                 </View>
