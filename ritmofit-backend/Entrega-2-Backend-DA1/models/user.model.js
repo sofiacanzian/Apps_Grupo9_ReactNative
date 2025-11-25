@@ -30,6 +30,10 @@ const User = sequelize.define('User', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    pin_hash: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     email_verificado: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

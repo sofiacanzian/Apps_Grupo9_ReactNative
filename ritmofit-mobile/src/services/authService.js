@@ -60,3 +60,47 @@ export const confirmPasswordReset = async ({ email, otpCode, password, confirmPa
 export const logout = () => {
     console.log('✓ Logout completado');
 };
+
+export const loginWithPin = async ({ identifier, pin }) => {
+    try {
+        const response = await api.post('/auth/login-pin', { identifier, pin });
+        const data = extractData(response);
+        return { token: data.token ?? response?.data?.token, user: data.user ?? response?.data?.user };
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'PIN inválido.');
+    }
+};
+
+export const checkPinExists = async (identifier) => {
+    try {
+        const response = await api.post('/auth/pin/check', { identifier });
+        const data = extractData(response);
+        // endpoint returns { hasPin: boolean }
+        return { hasPin: data?.hasPin ?? response?.data?.hasPin ?? false };
+    } catch (error) {
+        // On error, assume false (don't show PIN option)
+        return { hasPin: false };
+    }
+};
+
+export const setPin = async (token, pin) => {
+    try {
+        const response = await api.post('/auth/pin', { pin }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return extractData(response);
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'No se pudo establecer el PIN.');
+    }
+};
+
+export const clearPin = async (token) => {
+    try {
+        const response = await api.delete('/auth/pin', {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return extractData(response);
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'No se pudo eliminar el PIN.');
+    }
+};
