@@ -6,6 +6,59 @@ const { Op } = require('sequelize');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
+/**
+ * Login con PIN (envía identifier + pin)
+ */
+exports.loginWithPin = async (req, res) => {
+    const { identifier, pin } = req.body;
+
+    if (!identifier || !pin) {
+        return res.status(400).json({ message: 'Credenciales incompletas.' });
+    }
+
+    try {
+        const user = await findUserByIdentifier(identifier);
+        if (!user || !user.pin_hash) {
+            return res.status(401).json({ message: 'Credenciales inválidas.' });
+        }
+
+        if (!user.email_verificado) {
+            return res.status(403).json({ message: 'Debes verificar tu email antes de iniciar sesión.' });
+        }
+
+        const pinValid = await bcrypt.compare(String(pin), user.pin_hash);
+        if (!pinValid) {
+            return res.status(401).json({ message: 'Credenciales inválidas.' });
+        }
+
+        const token = generateToken(user.id);
+        return res.status(200).json({
+            message: 'Inicio de sesión con PIN exitoso.',
+            token,
+            user: sanitizeUser(user),
+        });
+    } catch (error) {
+        console.error('Error en loginWithPin:', error);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * Comprueba si un usuario identificado por email/username tiene PIN seteado
+ */
+exports.checkPinExists = async (req, res) => {
+    const { identifier } = req.body;
+    if (!identifier) return res.status(400).json({ message: 'Falta identifier.' });
+    try {
+        const user = await findUserByIdentifier(identifier);
+        if (!user) return res.status(200).json({ hasPin: false });
+        return res.status(200).json({ hasPin: !!user.pin_hash });
+    } catch (err) {
+        console.error('Error en checkPinExists:', err);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
 // Función para generar un código OTP simple de 6 dígitos
 const generateOTP = () => {
     return crypto.randomInt(100000, 999999).toString();
@@ -161,6 +214,15 @@ exports.register = async (req, res) => {
         }
 
         const passwordHash = await bcrypt.hash(password, 10);
+        // Si viene PIN en el registro, hashearlo y guardarlo también
+        let pinHash = null;
+        if (req.body.pin) {
+            try {
+                pinHash = await bcrypt.hash(String(req.body.pin), 10);
+            } catch (err) {
+                console.warn('No se pudo hashear el PIN en register:', err);
+            }
+        }
         const otpCode = generateOTP();
         const otpExpiration = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -184,6 +246,7 @@ exports.register = async (req, res) => {
                 telefono,
                 username,
                 password_hash: passwordHash,
+                pin_hash: pinHash,
                 rol: 'socio',
                 email_verificado: false,
                 otp_code: otpCode,
@@ -248,6 +311,44 @@ exports.verifyRegistrationOtp = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en verifyRegistrationOtp:', error);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * Setear/actualizar PIN para el usuario autenticado
+ */
+exports.setPin = async (req, res) => {
+    const { pin } = req.body;
+    if (!pin || String(pin).trim().length < 4) {
+        return res.status(400).json({ message: 'PIN inválido. Debe tener al menos 4 dígitos.' });
+    }
+
+    try {
+        const user = req.user; // middleware 'protect' attachs user
+        if (!user) return res.status(401).json({ message: 'No autenticado.' });
+
+        const pinHash = await bcrypt.hash(String(pin), 10);
+        await user.update({ pin_hash: pinHash });
+        return res.status(200).json({ message: 'PIN guardado correctamente.' });
+    } catch (err) {
+        console.error('Error en setPin:', err);
+        return res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+
+/**
+ * Remover PIN del usuario autenticado
+ */
+exports.clearPin = async (req, res) => {
+    try {
+        const user = req.user;
+        if (!user) return res.status(401).json({ message: 'No autenticado.' });
+
+        await user.update({ pin_hash: null });
+        return res.status(200).json({ message: 'PIN eliminado correctamente.' });
+    } catch (err) {
+        console.error('Error en clearPin:', err);
         return res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };

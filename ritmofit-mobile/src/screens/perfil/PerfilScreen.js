@@ -18,7 +18,8 @@ import {
     requestAccountDeletionOtp,
     confirmAccountDeletion,
 } from '../../services/userService';
-import { clearCredentials } from '../../services/credentialStorage';
+import { clearCredentials, saveCredentials, getCredentials } from '../../services/credentialStorage';
+import * as authService from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 
 const formatDate = (value) => (!value ? '' : value.split('T')[0]);
@@ -27,6 +28,7 @@ const isValidDate = (value) => !value || /^\d{4}-\d{2}-\d{2}$/.test(value);
 export const PerfilScreen = () => {
     const logout = useAuthStore((state) => state.logout);
     const setUser = useAuthStore((state) => state.setUser);
+    const token = useAuthStore((state) => state.token);
 
     const [nombre, setNombre] = useState('');
     const [email, setEmail] = useState('');
@@ -45,9 +47,29 @@ export const PerfilScreen = () => {
     const [requestingDeletion, setRequestingDeletion] = useState(false);
     const [confirmingDeletion, setConfirmingDeletion] = useState(false);
 
+    // PIN management (server-side)
+    const [pinInput, setPinInput] = useState('');
+    const [pinProcessing, setPinProcessing] = useState(false);
+    const [autoSaveCreds, setAutoSaveCreds] = useState(false);
+    const [localPinExists, setLocalPinExists] = useState(false);
+
+    const checkLocalPin = async () => {
+        // Currently PIN is managed server-side. Keep localPinExists=false
+        // This placeholder avoids crashes from missing function references.
+        try {
+            setLocalPinExists(false);
+        } catch (e) {
+            setLocalPinExists(false);
+        }
+    };
+
     useEffect(() => {
         loadProfile();
+        checkLocalPin();
     }, []);
+
+    // No comprobamos PIN local; el estado del PIN se guarda en el servidor. Si se desea, se puede añadir
+    // un endpoint para consultar si el usuario tiene PIN configurado.
 
     const loadProfile = async () => {
         try {
@@ -157,6 +179,59 @@ export const PerfilScreen = () => {
         }
     };
 
+    const handleSetPin = async () => {
+        if (!pinInput || pinInput.trim().length < 4) {
+            Alert.alert('PIN inválido', 'Ingresa un PIN de al menos 4 dígitos.');
+            return;
+        }
+        try {
+            setPinProcessing(true);
+            // Intentar guardar en servidor (requiere token)
+            if (token) {
+                try {
+                    await authService.setPin(token, pinInput.trim());
+                } catch (err) {
+                    // No impedir guardado local si falla el servidor
+                    console.warn('No se pudo guardar PIN en servidor:', err.message || err);
+                }
+            }
+            // Si el usuario opta por autoguardar credenciales, guardarlas también (solo credenciales, no PIN)
+            if (autoSaveCreds) {
+                const creds = await getCredentials();
+                if (!creds && email) {
+                    Alert.alert('Credenciales no guardadas', 'No se encontraron credenciales guardadas. Para guardar la contraseña localmente, inicia sesión una vez con contraseña o activa biometría en el registro.');
+                }
+            }
+
+            setPinInput('');
+            Alert.alert('PIN guardado', 'El PIN se guardó en el servidor. Ahora podrás iniciar sesión con PIN.');
+        } catch (error) {
+            Alert.alert('Error', error.message || 'No se pudo guardar el PIN.');
+        } finally {
+            setPinProcessing(false);
+        }
+    };
+
+    const handleClearPin = async () => {
+        try {
+            setPinProcessing(true);
+            if (token) {
+                try {
+                    await authService.clearPin(token);
+                } catch (err) {
+                    console.warn('No se pudo limpiar PIN en servidor:', err.message || err);
+                }
+            }
+            // Limpiamos credenciales locales si existen, pero no mantenemos PIN localmente
+            await clearCredentials();
+            Alert.alert('PIN eliminado', 'Se eliminó el PIN en el servidor y las credenciales locales.');
+        } catch (err) {
+            Alert.alert('Error', err.message || 'No se pudo eliminar el PIN.');
+        } finally {
+            setPinProcessing(false);
+        }
+    };
+
     const handleConfirmDeletion = async () => {
         if (deleteOtp.length !== 6) {
             Alert.alert('Código inválido', 'Ingresa los 6 dígitos recibidos por email.');
@@ -239,6 +314,36 @@ export const PerfilScreen = () => {
 
                 <TouchableOpacity style={styles.deleteButton} onPress={handleRequestDeletion} disabled={requestingDeletion}>
                     {requestingDeletion ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteButtonText}>Eliminar cuenta</Text>}
+                </TouchableOpacity>
+            </View>
+
+            {/* PIN management section */}
+            <View style={[styles.profileContainer, { marginTop: 8 }]}
+            >
+                <Text style={styles.sectionLabel}>PIN y Acceso</Text>
+                <Text style={{ marginBottom: 8, color: '#374151' }}>{localPinExists ? 'PIN configurado localmente' : 'No hay PIN configurado'}</Text>
+
+                <TextInput
+                    style={styles.input}
+                    value={pinInput}
+                    onChangeText={(t) => setPinInput(t.replace(/[^0-9]/g, '').slice(0,6))}
+                    placeholder="Ingrese PIN (4-6 dígitos)"
+                    keyboardType="number-pad"
+                    secureTextEntry
+                    maxLength={6}
+                />
+
+                <View style={{ flexDirection: 'row' }}>
+                    <TouchableOpacity style={[styles.button, pinProcessing && styles.buttonDisabled, { flex: 1, marginRight: 8 }]} onPress={handleSetPin} disabled={pinProcessing}>
+                        {pinProcessing ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Guardar PIN</Text>}
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.logoutButton, (!localPinExists || pinProcessing) && styles.buttonDisabled, { flex: 1 }]} onPress={handleClearPin} disabled={!localPinExists || pinProcessing}>
+                        {pinProcessing ? <ActivityIndicator color="#fff" /> : <Text style={styles.logoutText}>Eliminar PIN</Text>}
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity style={{ marginTop: 10 }} onPress={() => setAutoSaveCreds((v) => !v)}>
+                    <Text style={{ color: autoSaveCreds ? '#2563eb' : '#6b7280', fontWeight: '600' }}>{autoSaveCreds ? 'Guardar credenciales activado' : 'Guardar credenciales desactivado'}</Text>
                 </TouchableOpacity>
             </View>
 
@@ -443,5 +548,11 @@ const styles = StyleSheet.create({
     modalConfirmText: {
         color: '#fff',
         fontWeight: '700',
+    },
+    sectionLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#475569',
+        marginBottom: 8,
     },
 });

@@ -8,7 +8,8 @@ import api from './api';
 export const getNoticias = async (filtros = {}) => {
   try {
     const response = await api.get('/noticias', { params: filtros });
-    return response.data || [];
+    // API responde { status, results, data }
+    return response.data?.data || [];
   } catch (error) {
     console.error('Error fetching noticias:', error);
     throw new Error(error.response?.data?.message || 'No se pudieron cargar las noticias');
@@ -23,7 +24,7 @@ export const getNoticias = async (filtros = {}) => {
 export const getNoticiaDetalle = async (noticiaId) => {
   try {
     const response = await api.get(`/noticias/${noticiaId}`);
-    return response.data;
+    return response.data?.data || null;
   } catch (error) {
     console.error('Error fetching noticia detail:', error);
     throw new Error(error.response?.data?.message || 'No se pudo cargar la noticia');
@@ -44,7 +45,7 @@ export const getNoticiasDestacadas = async (limit = 5) => {
         sort: '-fecha_publicacion'
       } 
     });
-    return response.data || [];
+    return response.data?.data || [];
   } catch (error) {
     console.error('Error fetching noticias destacadas:', error);
     throw new Error(error.response?.data?.message || 'No se pudieron cargar las noticias destacadas');
@@ -65,7 +66,7 @@ export const getPromociones = async (filtros = {}) => {
         ...filtros
       } 
     });
-    return response.data || [];
+    return response.data?.data || [];
   } catch (error) {
     console.error('Error fetching promociones:', error);
     throw new Error(error.response?.data?.message || 'No se pudieron cargar las promociones');
@@ -85,7 +86,7 @@ export const getEventos = async (filtros = {}) => {
         ...filtros
       } 
     });
-    return response.data || [];
+    return response.data?.data || [];
   } catch (error) {
     console.error('Error fetching eventos:', error);
     throw new Error(error.response?.data?.message || 'No se pudieron cargar los eventos');

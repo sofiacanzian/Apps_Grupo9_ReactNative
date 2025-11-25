@@ -11,16 +11,21 @@ import {
 } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useAuthStore } from '../../store/authStore';
-import { saveCredentials, getCredentials, clearCredentials } from '../../services/credentialStorage';
+import { saveCredentials, getCredentials, clearCredentials, getPinHash, verifyPin } from '../../services/credentialStorage';
+import * as authService from '../../services/authService';
 
 export const LoginScreen = ({ navigation }) => {
-  const { login, isLoading, error } = useAuthStore();
+  const { login, isLoading, error, setSession } = useAuthStore();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [rememberWithBiometrics, setRememberWithBiometrics] = useState(false);
   const [biometryAvailable, setBiometryAvailable] = useState(false);
   const [storedCredentials, setStoredCredentials] = useState(null);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [storedPinExists, setStoredPinExists] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
 
   useEffect(() => {
     const initBiometrics = async () => {
@@ -35,6 +40,8 @@ export const LoginScreen = ({ navigation }) => {
           setStoredCredentials(creds);
           setIdentifier(creds.identifier);
         }
+        const pinHash = await getPinHash();
+        if (pinHash) setStoredPinExists(true);
       } catch (err) {
         console.warn('Biometría no disponible:', err);
       }
@@ -43,6 +50,33 @@ export const LoginScreen = ({ navigation }) => {
     initBiometrics();
   }, []);
 
+  // Debounced check server for PIN existence while user types identifier
+  const checkServerPinForIdentifier = async (id) => {
+    try {
+      const trimmed = id?.trim();
+      if (!trimmed) {
+        setStoredPinExists(false);
+        return;
+      }
+      const res = await authService.checkPinExists(trimmed);
+      if (res && res.hasPin) {
+        setStoredPinExists(true);
+      } else {
+        setStoredPinExists(false);
+      }
+    } catch (err) {
+      // ignore network errors for UX
+    }
+  };
+
+  // Debounce helper
+  const debounceRef = React.useRef(null);
+  const debouncedCheck = (text) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => checkServerPinForIdentifier(text), 500);
+  };
+
+
   const handleSubmit = async () => {
     if (!identifier.trim() || !password) {
       Alert.alert('Campos incompletos', 'Ingresa tu email/usuario y contraseña.');
@@ -50,17 +84,17 @@ export const LoginScreen = ({ navigation }) => {
     }
     const trimmedIdentifier = identifier.trim();
     const success = await login({ identifier: trimmedIdentifier, password });
-    if (!success) {
-      Alert.alert('Error', useAuthStore.getState().error || 'No se pudo iniciar sesión.');
-    } else if (biometryAvailable && rememberWithBiometrics) {
-      await saveCredentials({ identifier: trimmedIdentifier, password });
-      setStoredCredentials({ identifier: trimmedIdentifier, password });
-      navigation.replace('MainTabs');
-    } else {
-      await clearCredentials();
-      setStoredCredentials(null);
-      navigation.replace('MainTabs');
-    }
+      if (!success) {
+        Alert.alert('Error', useAuthStore.getState().error || 'No se pudo iniciar sesión.');
+      } else if (biometryAvailable && rememberWithBiometrics) {
+        await saveCredentials({ identifier: trimmedIdentifier, password });
+        setStoredCredentials({ identifier: trimmedIdentifier, password });
+        // sesión creada en el store; RootLayout renderizará AppStack
+      } else {
+        await clearCredentials();
+        setStoredCredentials(null);
+        // sesión creada en el store; RootLayout renderizará AppStack
+      }
   };
 
   const handleBiometricLogin = async () => {
@@ -82,9 +116,7 @@ export const LoginScreen = ({ navigation }) => {
           identifier: storedCredentials.identifier,
           password: storedCredentials.password,
         });
-        if (success) {
-          navigation.replace('MainTabs');
-        } else {
+        if (!success) {
           Alert.alert('Error', useAuthStore.getState().error || 'No se pudo iniciar sesión.');
         }
       } else {
@@ -94,6 +126,32 @@ export const LoginScreen = ({ navigation }) => {
       Alert.alert('Error', err.message || 'No se pudo usar la autenticación biométrica.');
     } finally {
       setBiometricLoading(false);
+    }
+  };
+
+  const handlePinSubmit = async () => {
+    if (!pinInput || pinInput.trim().length < 4) {
+      Alert.alert('PIN inválido', 'Ingresa el PIN de 4 dígitos.');
+      return;
+    }
+    setPinLoading(true);
+    try {
+      // Login EXCLUSIVO server-side con PIN
+      const identifierToUse = (identifier && identifier.trim()) || (await getCredentials())?.identifier;
+      if (!identifierToUse) {
+        Alert.alert('Falta identificador', 'Ingresa tu email/usuario en el campo Usuario o guarda tus credenciales para usar PIN.');
+        return;
+      }
+
+      const { token, user } = await authService.loginWithPin({ identifier: identifierToUse, pin: pinInput.trim() });
+      setSession({ token, user });
+      setShowPinModal(false);
+      setPinInput('');
+      // sesión creada en el store por setSession; RootLayout cambiará a AppStack
+    } catch (err) {
+      Alert.alert('Error', err.message || 'No se pudo procesar el PIN.');
+    } finally {
+      setPinLoading(false);
     }
   };
 
@@ -126,7 +184,10 @@ export const LoginScreen = ({ navigation }) => {
               autoCapitalize="none"
               keyboardType="email-address"
               value={identifier}
-              onChangeText={setIdentifier}
+              onChangeText={(t) => {
+                setIdentifier(t);
+                debouncedCheck(t);
+              }}
             />
 
             <Text style={styles.label}>Contraseña</Text>
@@ -166,10 +227,45 @@ export const LoginScreen = ({ navigation }) => {
                 />
               </View>
             )}
+
+            {storedPinExists && (
+              <TouchableOpacity
+                style={[styles.biometricButton, pinLoading && styles.biometricButtonDisabled]}
+                onPress={() => setShowPinModal(true)}
+                disabled={pinLoading}
+              >
+                <Text style={styles.biometricButtonText}>Ingresar con PIN</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
 
         <View style={styles.divider} />
+
+        {showPinModal && (
+          <View style={styles.pinModalOverlay}>
+            <View style={styles.pinModalCard}>
+              <Text style={{fontWeight:'700',fontSize:18,marginBottom:8}}>Ingresar con PIN</Text>
+              <TextInput
+                style={styles.input}
+                value={pinInput}
+                onChangeText={(t) => setPinInput(t.replace(/[^0-9]/g,'').slice(0,6))}
+                placeholder="1234"
+                keyboardType="number-pad"
+                secureTextEntry
+                maxLength={6}
+              />
+              <View style={{flexDirection:'row',justifyContent:'space-between',marginTop:8}}>
+                <TouchableOpacity style={[styles.secondaryButton,{flex:1,marginRight:8}]} onPress={() => setShowPinModal(false)}>
+                  <Text style={styles.secondaryButtonText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.primaryButton,{flex:1}]} onPress={handlePinSubmit} disabled={pinLoading}>
+                  {pinLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Ingresar</Text>}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Register')}>
           <Text style={styles.secondaryButtonText}>Crear cuenta nueva</Text>
@@ -199,4 +295,6 @@ const styles = StyleSheet.create({
   secondaryButton: { borderWidth: 1, borderColor: '#2563eb', borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   secondaryButtonText: { color: '#2563eb', fontWeight: '600' },
   errorText: { color: '#dc2626', textAlign: 'center', marginBottom: 12 },
+  pinModalOverlay: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
+  pinModalCard: { width: '90%', backgroundColor: '#fff', padding: 18, borderRadius: 12, elevation: 6 },
 });
