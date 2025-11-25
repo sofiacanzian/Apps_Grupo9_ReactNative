@@ -13,6 +13,7 @@ const reservaRoutes = require('./routes/reserva.routes');
 const asistenciaRoutes = require('./routes/asistencia.routes'); // <-- AGREGAR
 const historialRoutes = require('./routes/historial.routes');
 const calificacionRoutes = require('./routes/calificacion.routes');
+const noticiasRoutes = require('./routes/noticias.routes');
 
 
 const app = express();
@@ -82,6 +83,8 @@ app.use('/api/historial', historialRoutes);
 
 // Rutas para calificaciones
 app.use('/api/calificaciones', calificacionRoutes);
+// Rutas para noticias y promociones
+app.use('/api/noticias', noticiasRoutes);
 
 // =================================================================
 // 3. Inicio del Servidor
