@@ -55,11 +55,11 @@ export const LoginScreen = ({ navigation }) => {
     } else if (biometryAvailable && rememberWithBiometrics) {
       await saveCredentials({ identifier: trimmedIdentifier, password });
       setStoredCredentials({ identifier: trimmedIdentifier, password });
-      navigation.replace('Home');
+      navigation.replace('MainTabs');
     } else {
       await clearCredentials();
       setStoredCredentials(null);
-      navigation.replace('Home');
+      navigation.replace('MainTabs');
     }
   };
 
@@ -83,7 +83,7 @@ export const LoginScreen = ({ navigation }) => {
           password: storedCredentials.password,
         });
         if (success) {
-          navigation.replace('Home');
+          navigation.replace('MainTabs');
         } else {
           Alert.alert('Error', useAuthStore.getState().error || 'No se pudo iniciar sesión.');
         }

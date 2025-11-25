@@ -25,6 +25,7 @@ const connectDB = async () => {
         require('../models/clase.model');     
         require('../models/reserva.model');   
         require('../models/asistencia.model'); 
+        require('../models/noticia.model');
         
         // --- 2. SINCRONIZAR LA BASE DE DATOS (UNA SOLA VEZ) ---
         // NOTA: Usar { alter: true } aplica cambios sin borrar datos. 

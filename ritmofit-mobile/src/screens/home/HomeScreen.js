@@ -13,10 +13,12 @@ import {
     LayoutAnimation,
     Platform,
     UIManager,
+    Image,
 } from 'react-native';
 import { getClases, getSedes } from '../../services/claseService';
 import { createReserva } from '../../services/reservaService';
 import { scheduleClassReminder } from '../../services/notificationService';
+import { getNoticiasDestacadas } from '../../services/noticiasService';
 import { useAuthStore } from '../../store/authStore';
 
 const NIVELES = ['principiante', 'intermedio', 'avanzado'];
@@ -30,6 +32,7 @@ const DATE_FILTERS = [
 export const HomeScreen = ({ navigation }) => {
     const { user } = useAuthStore();
     const [clases, setClases] = useState([]);
+    const [noticias, setNoticias] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [sedes, setSedes] = useState([]);
@@ -117,11 +120,13 @@ export const HomeScreen = ({ navigation }) => {
             const filtros = buildFilters();
             const clasesPromise = getClases(filtros);
             const sedesPromise = fetchSedes ? getSedes() : Promise.resolve(sedes);
-            const [clasesData, sedesData] = await Promise.all([clasesPromise, sedesPromise]);
+            const noticiasPromise = getNoticiasDestacadas(3);
+            const [clasesData, sedesData, noticiasData] = await Promise.all([clasesPromise, sedesPromise, noticiasPromise]);
             const rawClases = Array.isArray(clasesData) ? clasesData : [];
             const uniqDisciplines = Array.from(new Set(rawClases.map((clase) => clase.disciplina).filter(Boolean)));
             setAvailableDisciplines(uniqDisciplines);
             setClases(applyWeekFilter(rawClases));
+            setNoticias(Array.isArray(noticiasData) ? noticiasData : []);
             if (fetchSedes) {
                 setSedes(Array.isArray(sedesData) ? sedesData : []);
             }
@@ -179,6 +184,64 @@ export const HomeScreen = ({ navigation }) => {
         } else if (navigation.navigate) {
             navigation.navigate('ClassDetail', params);
         }
+    };
+
+    const openNoticiaDetalle = (noticia) => {
+        const parentNavigator = navigation.getParent?.();
+        if (parentNavigator?.navigate) {
+            parentNavigator.navigate('NoticiaDetalle', { noticia });
+        } else if (navigation.navigate) {
+            navigation.navigate('NoticiaDetalle', { noticia });
+        }
+    };
+
+    const openNoticias = () => {
+        const parentNavigator = navigation.getParent?.();
+        if (parentNavigator?.navigate) {
+            parentNavigator.navigate('Noticias');
+        } else if (navigation.navigate) {
+            navigation.navigate('Noticias');
+        }
+    };
+
+    const renderNoticiaCarrusel = ({ item }) => {
+        const titulo = item.titulo || 'Sin título';
+        const descripcion = item.descripcion || '';
+        const imagen = item.imagen_url || null;
+        const tipo = item.tipo || 'noticia';
+
+        const getIconoTipo = (tipo) => {
+            switch (tipo) {
+                case 'promocion':
+                    return '🎉';
+                case 'evento':
+                    return '📅';
+                case 'noticia':
+                default:
+                    return '📰';
+            }
+        };
+
+        return (
+            <TouchableOpacity
+                style={styles.noticiaCarruselCard}
+                onPress={() => openNoticiaDetalle(item)}
+                activeOpacity={0.85}
+            >
+                {imagen && (
+                    <Image
+                        source={{ uri: imagen }}
+                        style={styles.noticiaCarruselImagen}
+                        resizeMode="cover"
+                    />
+                )}
+                <View style={[styles.noticiaCarruselOverlay, !imagen && styles.noticiaCarruselOverlayNoImg]}>
+                    <Text style={styles.noticiaCarruselIcon}>{getIconoTipo(tipo)}</Text>
+                    <Text style={styles.noticiaCarruselTitulo} numberOfLines={2}>{titulo}</Text>
+                    <Text style={styles.noticiaCarruselDescripcion} numberOfLines={1}>{descripcion}</Text>
+                </View>
+            </TouchableOpacity>
+        );
     };
 
     const renderClase = ({ item }) => {
@@ -435,6 +498,27 @@ export const HomeScreen = ({ navigation }) => {
                     renderItem={renderClase}
                     keyExtractor={(item) => item.id.toString()}
                     contentContainerStyle={styles.listContainer}
+                    ListHeaderComponent={
+                        noticias.length > 0 && (
+                            <View style={styles.noticiasSection}>
+                                <View style={styles.noticiasSectionHeader}>
+                                    <Text style={styles.noticiasSectionTitle}>📰 Noticias y Promociones</Text>
+                                    <TouchableOpacity onPress={openNoticias}>
+                                        <Text style={styles.noticiasVerMas}>Ver todas →</Text>
+                                    </TouchableOpacity>
+                                </View>
+                                <FlatList
+                                    data={noticias}
+                                    renderItem={renderNoticiaCarrusel}
+                                    keyExtractor={(item) => `noticia-${item.id}`}
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={styles.noticiasCarruselContainer}
+                                    scrollEventThrottle={16}
+                                />
+                            </View>
+                        )
+                    }
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}
@@ -771,5 +855,70 @@ const styles = StyleSheet.create({
     loadingText: {
         marginTop: 12,
         color: '#6b7280',
+    },
+    noticiasSection: {
+        marginBottom: 24,
+    },
+    noticiasSectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: 0,
+        marginBottom: 12,
+    },
+    noticiasSectionTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#1f2937',
+    },
+    noticiasVerMas: {
+        color: '#3b82f6',
+        fontWeight: '600',
+        fontSize: 13,
+    },
+    noticiasCarruselContainer: {
+        paddingHorizontal: 0,
+        gap: 12,
+    },
+    noticiaCarruselCard: {
+        width: 280,
+        height: 140,
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    noticiaCarruselImagen: {
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+    },
+    noticiaCarruselOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        justifyContent: 'flex-end',
+        padding: 12,
+    },
+    noticiaCarruselOverlayNoImg: {
+        backgroundColor: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        justifyContent: 'center',
+    },
+    noticiaCarruselIcon: {
+        fontSize: 20,
+        marginBottom: 4,
+    },
+    noticiaCarruselTitulo: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#fff',
+        lineHeight: 18,
+    },
+    noticiaCarruselDescripcion: {
+        fontSize: 12,
+        color: '#e0e7ff',
+        marginTop: 4,
     },
 });
