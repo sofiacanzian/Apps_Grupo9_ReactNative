@@ -11,8 +11,6 @@ import {
     RefreshControl,
     TextInput,
     LayoutAnimation,
-    Platform,
-    UIManager,
     Image,
 } from 'react-native';
 import { getClases, getSedes } from '../../services/claseService';
@@ -55,9 +53,6 @@ export const HomeScreen = ({ navigation }) => {
 
     useEffect(() => {
         loadData(true);
-        if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-            UIManager.setLayoutAnimationEnabledExperimental(true);
-        }
     }, []);
 
     useEffect(() => {
