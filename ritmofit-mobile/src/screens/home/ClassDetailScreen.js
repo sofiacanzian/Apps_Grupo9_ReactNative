@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, Linking } from 'react-native';
 import { getClaseById } from '../../services/claseService';
 import { createReserva } from '../../services/reservaService';
 import { scheduleClassReminder } from '../../services/notificationService';
@@ -57,6 +57,15 @@ export const ClassDetailScreen = ({ route }) => {
         }
     };
 
+    const handleOpenMap = () => {
+        if (!sede?.direccion) return;
+        const address = encodeURIComponent(`${sede.nombre ?? ''} ${sede.direccion}`.trim());
+        const url = `https://www.google.com/maps/search/?api=1&query=${address}`;
+        Linking.openURL(url).catch(() => {
+            Alert.alert('Error', 'No se pudo abrir Google Maps.');
+        });
+    };
+
     if (loading || !clase) {
         return (
             <View style={styles.center}>
@@ -90,6 +99,9 @@ export const ClassDetailScreen = ({ route }) => {
                     <Text style={styles.sectionTitle}>Sede</Text>
                     <Text style={styles.infoText}>{sede?.nombre}</Text>
                     <Text style={styles.infoText}>{sede?.direccion}</Text>
+                    <TouchableOpacity style={styles.mapButton} onPress={handleOpenMap}>
+                        <Text style={styles.mapButtonText}>📍 Cómo llegar</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.section}>
@@ -194,5 +206,18 @@ const styles = StyleSheet.create({
     },
     error: {
         color: '#ef4444',
+    },
+    mapButton: {
+        marginTop: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        backgroundColor: '#e0f2fe',
+        borderRadius: 8,
+        alignSelf: 'flex-start',
+    },
+    mapButtonText: {
+        color: '#0284c7',
+        fontWeight: '600',
+        fontSize: 14,
     },
 });

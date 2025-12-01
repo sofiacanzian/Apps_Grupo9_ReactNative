@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Linking,
 } from 'react-native';
 import { getReservas, cancelReserva } from '../../services/reservaService';
 import { cancelClassReminder } from '../../services/notificationService';
@@ -31,8 +32,13 @@ export const ReservasScreen = () => {
   const loadItems = async () => {
     try {
       if (!refreshing) setLoading(true);
-      const data = await getReservas({ tipo: 'proximas' });
-      setItems(Array.isArray(data?.data) ? data.data : []);
+      const response = await getReservas({ tipo: 'proximas' });
+      const reservas = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+      setItems(reservas);
     } catch (error) {
       Alert.alert('Error', error.message || 'Error al cargar datos');
     } finally {
@@ -70,6 +76,16 @@ export const ReservasScreen = () => {
     );
   };
 
+  const handleOpenMaps = (direccion, sedeNombre) => {
+    if (!direccion) {
+      Alert.alert('Dirección no disponible', 'No encontramos la dirección de esta sede.');
+      return;
+    }
+    const label = sedeNombre ? `${sedeNombre} ${direccion}` : direccion;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`;
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'No se pudo abrir Google Maps.'));
+  };
+
   const renderItem = ({ item }) => {
     const clase = item.Clase ?? {};
     const claseNombre = clase.nombre || item.clase_nombre || '—';
@@ -80,6 +96,7 @@ export const ReservasScreen = () => {
       : '—';
     const hora = horaRaw || '—';
     const sede = clase.Sede?.nombre || item.sede || '—';
+    const direccion = clase.Sede?.direccion || item.direccion;
     const profesor = clase.instructor?.nombre || clase.User?.nombre || item.profesor || '—';
     const disciplina = clase.disciplina || 'Entrenamiento';
     const estado = item.estado || (item.confirmado_por_qr ? 'asistida' : 'cancelada');
@@ -99,6 +116,15 @@ export const ReservasScreen = () => {
         <Text style={styles.reservaText}>📍 {sede}</Text>
         <Text style={styles.reservaText}>👨‍🏫 Prof: {profesor}</Text>
 
+        {direccion && (
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={() => handleOpenMaps(direccion, clase.Sede?.nombre || sede)}
+          >
+            <Text style={styles.mapButtonText}>📍 Cómo llegar</Text>
+          </TouchableOpacity>
+        )}
+
         {estado === 'activa' && (
           <TouchableOpacity
             style={styles.cancelButton}
@@ -111,30 +137,28 @@ export const ReservasScreen = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#3b82f6" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {items.length > 0 ? (
-        <FlatList
-          data={items}
-          renderItem={renderItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContainer}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        />
-      ) : (
+      {loading ? (
         <View style={styles.centerContainer}>
-          <Text style={styles.emptyText}>No tienes reservas próximas</Text>
-          <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>
+          <ActivityIndicator size="large" color="#3b82f6" />
         </View>
-      )}
+      ) : null}
+      <FlatList
+        data={items}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id.toString()}
+        contentContainerStyle={items.length === 0 ? styles.emptyStateContainer : styles.listContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        ListEmptyComponent={
+          !loading && (
+            <View style={styles.centerContainer}>
+              <Text style={styles.emptyText}>No tienes reservas próximas</Text>
+              <Text style={styles.emptySubtext}>¡Reserva una clase en el catálogo!</Text>
+            </View>
+          )
+        }
+      />
     </View>
   );
 };
@@ -173,7 +197,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     listContainer: {
-        padding: 10,
+      padding: 10,
+    },
+    emptyStateContainer: {
+      flexGrow: 1,
+      justifyContent: 'center',
+      padding: 16,
     },
     reservaCard: {
         backgroundColor: '#fff',
@@ -229,6 +258,18 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: '#fff',
         fontWeight: '600',
+    },
+    mapButton: {
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      borderRadius: 6,
+      backgroundColor: '#e0f2fe',
+      alignSelf: 'flex-start',
+    },
+    mapButtonText: {
+      color: '#0284c7',
+      fontWeight: '600',
     },
     emptyText: {
         fontSize: 16,

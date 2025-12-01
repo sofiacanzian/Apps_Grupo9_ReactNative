@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { registerCheckIn } from '../../services/reservaService';
+import { getClaseById } from '../../services/claseService';
 
 const parseQrPayload = (rawData) => {
     try {
@@ -29,8 +30,9 @@ const parseQrPayload = (rawData) => {
 
 export const QrScreen = () => {
     const [permission, requestPermission] = useCameraPermissions();
-    const [scanned, setScanned] = useState(false);
+    const [preview, setPreview] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [confirming, setConfirming] = useState(false);
 
     useEffect(() => {
         if (!permission) {
@@ -39,7 +41,7 @@ export const QrScreen = () => {
     }, []);
 
     const handleBarCodeScanned = async ({ data }) => {
-        if (scanned || loading) return;
+        if (preview || loading || confirming) return;
 
         const payload = parseQrPayload(data);
         if (!payload?.claseId) {
@@ -47,22 +49,46 @@ export const QrScreen = () => {
             return;
         }
 
-        setScanned(true);
         setLoading(true);
 
         try {
-            await registerCheckIn(payload.claseId);
+            const clase = await getClaseById(payload.claseId);
+            setPreview({
+                claseId: payload.claseId,
+                claseNombre: clase?.nombre || payload.claseNombre,
+                sede: clase?.Sede?.nombre,
+                direccion: clase?.Sede?.direccion,
+                fecha: clase?.fecha,
+                hora: clase?.hora_inicio || payload.horario,
+                disciplina: clase?.disciplina,
+            });
+        } catch (error) {
+            Alert.alert('Error', error.message || 'No pudimos registrar el check-in.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    const resetScanner = () => {
+        setPreview(null);
+        setConfirming(false);
+    };
+
+    const confirmCheckIn = async () => {
+        if (!preview?.claseId || confirming) return;
+        setConfirming(true);
+        try {
+            await registerCheckIn(preview.claseId);
             Alert.alert(
                 'Check-in confirmado',
-                `Clase: ${payload.claseNombre ?? 'RitmoFit'}${payload.horario ? `\nHora: ${payload.horario}` : ''}`,
-                [{ text: 'OK', onPress: () => setScanned(false) }]
+                `Clase: ${preview.claseNombre || 'RitmoFit'}${preview.hora ? `\nHora: ${preview.hora}` : ''}`,
+                [{ text: 'OK', onPress: resetScanner }]
             );
         } catch (error) {
             Alert.alert('Error', error.message || 'No pudimos registrar el check-in.');
-            setScanned(false);
+            resetScanner();
         } finally {
-            setLoading(false);
+            setConfirming(false);
         }
     };
 
@@ -89,7 +115,7 @@ export const QrScreen = () => {
         <View style={styles.container}>
             <CameraView
                 style={styles.camera}
-                onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+                onBarcodeScanned={preview ? undefined : handleBarCodeScanned}
                 barcodeScannerSettings={{
                     barcodeTypes: ['qr'],
                 }}
@@ -104,14 +130,22 @@ export const QrScreen = () => {
                 </View>
             )}
 
-            {scanned && (
-                <View style={styles.bottomContainer}>
-                    <TouchableOpacity
-                        style={styles.button}
-                        onPress={() => setScanned(false)}
-                    >
-                        <Text style={styles.buttonText}>Escanear de Nuevo</Text>
-                    </TouchableOpacity>
+            {preview && (
+                <View style={styles.previewCard}>
+                    <Text style={styles.previewTitle}>{preview.claseNombre || 'Clase detectada'}</Text>
+                    {preview.disciplina ? <Text style={styles.previewText}>{preview.disciplina}</Text> : null}
+                    {preview.fecha ? <Text style={styles.previewText}>📅 {new Date(preview.fecha).toLocaleDateString('es-AR')}</Text> : null}
+                    {preview.hora ? <Text style={styles.previewText}>🕒 {preview.hora}</Text> : null}
+                    {preview.sede ? <Text style={styles.previewText}>📍 {preview.sede}</Text> : null}
+                    {preview.direccion ? <Text style={styles.previewSubtext}>{preview.direccion}</Text> : null}
+                    <View style={styles.previewActions}>
+                        <TouchableOpacity style={[styles.button, styles.outlineButton]} onPress={resetScanner} disabled={confirming}>
+                            <Text style={[styles.buttonText, styles.outlineButtonText]}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.button} onPress={confirmCheckIn} disabled={confirming}>
+                            {confirming ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Confirmar</Text>}
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
         </View>
@@ -147,13 +181,6 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
-    bottomContainer: {
-        position: 'absolute',
-        bottom: 30,
-        left: 0,
-        right: 0,
-        alignItems: 'center',
-    },
     button: {
         backgroundColor: '#3b82f6',
         paddingHorizontal: 30,
@@ -168,5 +195,43 @@ const styles = StyleSheet.create({
     emptyText: {
         fontSize: 16,
         color: '#fff',
+    },
+    previewCard: {
+        position: 'absolute',
+        bottom: 20,
+        left: 20,
+        right: 20,
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        borderRadius: 16,
+        padding: 16,
+    },
+    previewTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#fff',
+        marginBottom: 4,
+    },
+    previewText: {
+        color: '#e2e8f0',
+        marginBottom: 4,
+    },
+    previewSubtext: {
+        color: '#94a3b8',
+        fontSize: 12,
+        marginBottom: 12,
+    },
+    previewActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 12,
+    },
+    outlineButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        borderColor: '#3b82f6',
+        flex: 1,
+    },
+    outlineButtonText: {
+        color: '#3b82f6',
     },
 });
