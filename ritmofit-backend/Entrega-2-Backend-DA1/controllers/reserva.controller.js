@@ -4,6 +4,7 @@ const Clase = require('../models/clase.model');
 const User = require('../models/user.model');
 const Sede = require('../models/sede.model');
 const { sendPushNotification } = require('../utils/push.service');
+const { sendCancellationNotification } = require('../utils/reminder.service');
 
 const RESERVA_INCLUDE = [
     { model: User, attributes: ['id', 'nombre', 'email'] },
@@ -209,13 +210,17 @@ exports.deleteReserva = async (req, res) => {
         reserva.estado = 'cancelada';
         await reserva.save();
 
+        // Obtener datos de la clase para la notificación
+        const claseData = await Clase.findByPk(reserva.claseId);
+        const userData = await User.findByPk(reserva.userId);
+
         res.status(200).json({ status: 'success', message: 'Reserva cancelada correctamente.' });
 
-        notifyReservaEvent({
-            expoToken: req.user.expo_push_token,
-            title: 'Reserva cancelada',
-            body: 'Tu reserva fue cancelada correctamente.',
-            data: { tipo: 'reserva_cancelada', reservaId },
+        // Enviar notificación de cancelación con detalles
+        sendCancellationNotification({
+            user: userData,
+            clase: claseData,
+            motivo: 'cancelada',
         });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

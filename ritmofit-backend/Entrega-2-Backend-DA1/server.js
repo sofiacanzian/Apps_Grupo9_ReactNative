@@ -14,6 +14,7 @@ const asistenciaRoutes = require('./routes/asistencia.routes'); // <-- AGREGAR
 const historialRoutes = require('./routes/historial.routes');
 const calificacionRoutes = require('./routes/calificacion.routes');
 const noticiasRoutes = require('./routes/noticias.routes');
+const { initReminderJob } = require('./jobs/reminder.job');
 
 
 const app = express();
@@ -94,4 +95,7 @@ app.use('/api/noticias', noticiasRoutes);
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
     connectDB();
+    
+    // Iniciar el job de recordatorios
+    initReminderJob();
 });
