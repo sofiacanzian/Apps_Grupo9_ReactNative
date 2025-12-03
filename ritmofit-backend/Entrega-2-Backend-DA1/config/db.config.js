@@ -7,8 +7,8 @@ const sequelize = new Sequelize(
     process.env.DB_PASS,
     {
         host: process.env.DB_HOST,
-        dialect: 'mysql', 
-        logging: false, 
+        dialect: 'mysql',
+        logging: false,
         pool: { max: 5, min: 0, acquire: 30000, idle: 10000 }
     }
 );
@@ -17,15 +17,16 @@ const connectDB = async () => {
     try {
         await sequelize.authenticate();
         console.log('✅ Conexión con MySQL establecida correctamente.');
-        
+
         // --- 1. CARGAR TODOS LOS MODELOS (SIN DUPLICIDADES) ---
         // Se cargan los modelos para que Sequelize sepa que existen
         require('../models/user.model');
-        require('../models/sede.model');      
-        require('../models/clase.model');     
-        require('../models/reserva.model');   
-        require('../models/asistencia.model'); 
+        require('../models/sede.model');
+        require('../models/clase.model');
+        require('../models/reserva.model');
+        require('../models/asistencia.model');
         require('../models/noticia.model');
+<<<<<<< HEAD
         
         // --- 2. SINCRONIZAR LA BASE DE DATOS (OPCIONAL) ---
         // Solo sincronizar si está explícitamente habilitado para evitar deadlocks
@@ -51,6 +52,19 @@ const connectDB = async () => {
         console.error('❌ Error al conectar/sincronizar la base de datos:', error.message);
         // No salir del proceso, solo loguear el error
         // Las tablas ya existen, solo falló el sync
+=======
+
+        // --- 2. SINCRONIZAR LA BASE DE DATOS (UNA SOLA VEZ) ---
+        // Usamos sync sin alter ni force para evitar errores de "too many keys"
+        // Las tablas ya deberían existir de los scripts de seed
+        await sequelize.sync({ force: false, alter: false });
+        console.log("✅ Modelos de tablas sincronizados con la base de datos.");
+
+    } catch (error) {
+        console.error('❌ Error al conectar/sincronizar la base de datos:', error.message);
+        // Si el servidor falla al arrancar por la DB, salir del proceso
+        process.exit(1);
+>>>>>>> origin/main
     }
 };
 

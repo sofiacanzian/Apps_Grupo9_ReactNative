@@ -9,8 +9,6 @@ import {
   Alert,
   RefreshControl,
   Image,
-  Platform,
-  UIManager,
   Linking,
 } from "react-native";
 import { getNoticias, getNoticiasDestacadas, getPromociones, getEventos, marcarNoticiaLeida } from "../../services/noticiasService";
@@ -32,9 +30,6 @@ export const NoticiasScreen = ({ navigation }) => {
 
   useEffect(() => {
     loadNoticias(true);
-    if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
   }, []);
 
   useEffect(() => {

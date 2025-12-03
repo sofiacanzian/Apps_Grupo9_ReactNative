@@ -155,12 +155,24 @@ const resolveProjectId = () => {
     );
 };
 
+const shouldSkipPushToken = () => {
+    const runningOnAndroidNative = Platform.OS === 'android' && Constants?.appOwnership !== 'expo';
+    const hasGoogleServicesConfigured = Boolean(
+        Constants?.expoConfig?.android?.googleServicesFile || process.env.EXPO_PUBLIC_ANDROID_GOOGLE_SERVICES
+    );
+    return runningOnAndroidNative && !hasGoogleServicesConfigured;
+};
+
 export const getExpoPushTokenAsync = async () => {
     const hasPermission = await requestNotificationPermission();
     if (!hasPermission) return null;
 
     if (Constants?.appOwnership === 'expo') {
         console.warn('Expo Go no soporta push reales. Usa un development build para habilitarlas.');
+        return null;
+    }
+
+    if (shouldSkipPushToken()) {
         return null;
     }
 

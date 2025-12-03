@@ -4,7 +4,7 @@ const { sequelize } = require('../config/db.config');
 const User = require('../models/user.model');
 const Clase = require('../models/clase.model');
 const Sede = require('../models/sede.model');
-const Asistencia = require('../models/asistencia.model'); // Asegurate de tener este modelo
+const Asistencia = require('../models/asistencia.model');
 
 const seedHistorial = async () => {
   try {
@@ -13,18 +13,29 @@ const seedHistorial = async () => {
     await sequelize.sync({ force: false });
     console.log('✅ Modelos sincronizados');
 
-    // Obtener usuario con id 1
-    const usuario = await User.findByPk(1);
+    // Obtener primer usuario disponible o crear uno de prueba
+    let usuario = await User.findOne();
     if (!usuario) {
-      console.error('❌ Usuario con id 1 no encontrado');
-      process.exit(1);
+      console.log('⚠️ No se encontraron usuarios. Creando usuario de prueba...');
+      usuario = await User.create({
+        nombre: 'Usuario Test',
+        email: 'test@ritmofit.com',
+        rol: 'socio',
+        activo: true
+      });
     }
+    const userId = usuario.id;
 
-    // Eliminar todas las asistencias del usuario 1
+    // Obtener un instructor válido
+    const instructor = await User.findOne({ where: { rol: 'instructor' } });
+    const instructorId = instructor ? instructor.id : userId; // Fallback al usuario si no hay instructor
+    if (!instructor) console.log('⚠️ No se encontró instructor, usando el usuario actual como instructor.');
+
+    // Eliminar todas las asistencias del usuario
     const deletedAsistencias = await Asistencia.destroy({
-      where: { userId: 1 }
+      where: { userId: userId }
     });
-    console.log(`🗑️  Eliminadas ${deletedAsistencias} asistencias del usuario 1`);
+    console.log(`🗑️  Eliminadas ${deletedAsistencias} asistencias del usuario ${userId}`);
 
     // Crear sede si no existe
     const sede = await Sede.findOrCreate({
@@ -40,7 +51,7 @@ const seedHistorial = async () => {
 
     // Calcular fechas
     const ahora = new Date();
-    
+
     // Calificable: hace 2 horas (dentro de las 24 horas)
     const fechaCalificable = new Date(ahora);
     fechaCalificable.setHours(ahora.getHours() - 2);
@@ -67,7 +78,7 @@ const seedHistorial = async () => {
       cupo_maximo: 15,
       nivel: 'principiante',
       sedeId: sede[0].id,
-      instructorId: 1,
+      instructorId: instructorId,
     });
 
     // Crear clase incalificable
@@ -81,7 +92,7 @@ const seedHistorial = async () => {
       cupo_maximo: 20,
       nivel: 'intermedio',
       sedeId: sede[0].id,
-      instructorId: 1,
+      instructorId: instructorId,
     });
 
     // Crear clase pasado el mes
@@ -95,13 +106,13 @@ const seedHistorial = async () => {
       cupo_maximo: 12,
       nivel: 'avanzado',
       sedeId: sede[0].id,
-      instructorId: 1,
+      instructorId: instructorId,
     });
 
-    // Crear asistencias para el usuario 1
+    // Crear asistencias para el usuario
     await Asistencia.bulkCreate([
       {
-        userId: 1,
+        userId: userId,
         claseId: claseCalificable.id,
         fecha_asistencia: fechaCalificable.toISOString().split('T')[0],
         checkin_hora: horaCalificable,
@@ -109,7 +120,7 @@ const seedHistorial = async () => {
         duracion_minutos: 60,
       },
       {
-        userId: 1,
+        userId: userId,
         claseId: claseIncalificable.id,
         fecha_asistencia: fechaIncalificable.toISOString().split('T')[0],
         checkin_hora: '10:05',
@@ -117,7 +128,7 @@ const seedHistorial = async () => {
         duracion_minutos: 50,
       },
       {
-        userId: 1,
+        userId: userId,
         claseId: clasePasadoMes.id,
         fecha_asistencia: fechaPasadoMes.toISOString().split('T')[0],
         checkin_hora: '18:02',
@@ -127,7 +138,7 @@ const seedHistorial = async () => {
     ]);
 
     console.log('✅ Clases y asistencias creadas');
-    console.log(`👤 Usuario: ${usuario.email || usuario.nombre || 'ID 1'}`);
+    console.log(`👤 Usuario: ${usuario.email || usuario.nombre || 'ID ' + userId}`);
     console.log(`✅ Clase calificable: ${claseCalificable.nombre} (hace 2 horas)`);
     console.log(`⛔ Clase incalificable: ${claseIncalificable.nombre} (hace 2 días)`);
     console.log(`📅 Clase pasado el mes: ${clasePasadoMes.nombre} (hace 3 meses)`);

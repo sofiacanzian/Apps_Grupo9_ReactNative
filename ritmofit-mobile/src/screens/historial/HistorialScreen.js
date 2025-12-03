@@ -10,9 +10,10 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getAsistencias } from '../../services/reservaService';
+import { getReservas } from '../../services/reservaService';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -35,17 +36,25 @@ const HistorialScreen = () => {
   const { user } = useAuthStore();
 
   useEffect(() => {
-    loadAsistencias();
+    loadHistorial();
   }, [rango]);
 
-  const buildParams = () => {
+  const applyRangoFilter = (reservasList) => {
     const rangoConfig = RANGOS.find((item) => item.key === rango);
-    if (rangoConfig?.dias) {
-      const fechaInicio = new Date();
-      fechaInicio.setDate(fechaInicio.getDate() - rangoConfig.dias);
-      return { fechaInicio: fechaInicio.toISOString().split('T')[0] };
-    }
-    return {};
+    if (!rangoConfig?.dias) return reservasList;
+
+    const fechaCorte = new Date();
+    fechaCorte.setDate(fechaCorte.getDate() - rangoConfig.dias);
+
+    return reservasList.filter((reserva) => {
+      const fechaInicio = reserva?.fecha_hora_inicio
+        ? new Date(reserva.fecha_hora_inicio)
+        : reserva?.Clase?.fecha
+        ? new Date(reserva.Clase.fecha)
+        : null;
+      if (!fechaInicio) return false;
+      return fechaInicio >= fechaCorte;
+    });
   };
 
   const loadCalificaciones = async () => {
@@ -73,14 +82,16 @@ const HistorialScreen = () => {
     }
   };
 
-  const loadAsistencias = async (isRefresh = false) => {
+  const loadHistorial = async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
-      const response = await getAsistencias(buildParams());
-        const asistenciasArray = Array.isArray(response) 
-        ? response 
-        : (Array.isArray(response?.data) ? response.data : []);
-      setAsistencias(asistenciasArray);
+      const response = await getReservas({ tipo: 'historial' });
+      const reservas = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+        ? response.data
+        : [];
+      setAsistencias(applyRangoFilter(reservas));
       
       await loadCalificaciones();
     } catch (error) {
@@ -91,50 +102,53 @@ const HistorialScreen = () => {
     }
   };
 
+  const handleOpenMaps = (direccion, sedeNombre) => {
+    if (!direccion) {
+      Alert.alert('Dirección no disponible', 'No encontramos la dirección de esta sede.');
+      return;
+    }
+    const label = sedeNombre ? `${sedeNombre} ${direccion}` : direccion;
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(label)}`;
+    Linking.openURL(url).catch(() => Alert.alert('Error', 'No se pudo abrir Google Maps.'));
+  };
+
   const renderAsistencia = ({ item }) => {
     const clase = item.Clase ?? {};
     const claseId = clase.id || item.claseId;
     const claseNombre = clase.nombre || item.clase_nombre || '—';
-    const fechaRaw = item.fecha_asistencia || item.fecha || null;
-    const fecha = fechaRaw
-      ? new Date(fechaRaw).toLocaleDateString('es-AR', {
+    const fechaInicio = item.fecha_hora_inicio
+      ? new Date(item.fecha_hora_inicio)
+      : clase.fecha
+      ? new Date(clase.fecha)
+      : null;
+    const fecha = fechaInicio
+      ? fechaInicio.toLocaleDateString('es-AR', {
           weekday: 'short',
           day: 'numeric',
           month: 'short',
         })
       : '—';
+    const horaInicio = fechaInicio
+      ? fechaInicio.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+      : clase.hora_inicio || '—';
     const sede = clase.Sede?.nombre || item.sede || '—';
+    const direccion = clase.Sede?.direccion || item.direccion;
     const duracion = clase.duracion_minutos || item.duracion_minutos || '—';
     const disciplina = clase.disciplina || 'General';
     const instructor = clase.instructor?.nombre || 'Profesor asignado';
-    const checkInHora = item.checkin_hora || '—';
-    const confirmadoQr = item.confirmado_por_qr;
-    
-    let fechaHoraFinClase = null;
-    if (fechaRaw) {
-      const fechaClase = new Date(fechaRaw);
-      // Usar la hora de inicio de la clase si está disponible
-      const horaInicio = clase.hora_inicio || item.hora_inicio;
-      const duracionMinutos = clase.duracion_minutos || item.duracion_minutos || 60;
-      
-      if (horaInicio) {
-        // Combinar fecha con hora de inicio
-        const [horas, minutos] = horaInicio.split(':').map(Number);
-        fechaClase.setHours(horas, minutos || 0, 0, 0);
-        // Sumar la duración para obtener la hora de finalización
-        fechaHoraFinClase = new Date(fechaClase.getTime() + duracionMinutos * 60 * 1000);
-      } else {
-        // Si no hay hora de inicio, usar el final del día de la clase
-        fechaClase.setHours(23, 59, 59, 999);
-        fechaHoraFinClase = fechaClase;
-      }
-    }
-    
+    const estado = item.estado || '—';
+
+    const fechaHoraFinClase = item.fecha_hora_fin
+      ? new Date(item.fecha_hora_fin)
+      : fechaInicio && duracion
+      ? new Date(fechaInicio.getTime() + Number(duracion) * 60000)
+      : null;
+
     const ahora = new Date();
-    const diferenciaHoras = fechaHoraFinClase 
+    const diferenciaHoras = fechaHoraFinClase
       ? (ahora - fechaHoraFinClase) / (1000 * 60 * 60)
-      : Infinity; // Si no hay fecha, no puede calificar
-    const puedeCalificar = diferenciaHoras > 0 && diferenciaHoras <= 24; // Debe haber pasado al menos un momento y no más de 24 horas 
+      : Infinity;
+    const puedeCalificar = estado === 'asistida' && diferenciaHoras > 0 && diferenciaHoras <= 24;
     const calificacion = claseId ? calificaciones[claseId] : null;
     const yaCalificada = !!calificacion;
     const puedeAbrirModal = puedeCalificar && !yaCalificada;
@@ -145,13 +159,30 @@ const HistorialScreen = () => {
           <Text style={styles.claseNombre}>{claseNombre}</Text>
           <Text style={styles.badge}>{disciplina}</Text>
         </View>
-        <Text style={styles.asistenciaText}>📅 {fecha} · ⏰ {checkInHora}</Text>
+        <Text style={styles.asistenciaText}>📅 {fecha} · ⏰ {horaInicio}</Text>
         <Text style={styles.asistenciaText}>📍 {sede}</Text>
         <Text style={styles.asistenciaText}>👤 Instructor: {instructor}</Text>
         <Text style={styles.asistenciaText}>⏱️ {duracion} minutos</Text>
-        <Text style={[styles.asistenciaText, confirmadoQr ? styles.qrText : styles.manualText]}>
-          {confirmadoQr ? '✅ Check-in con QR' : 'ℹ️ Check-in manual'}
+        <Text
+          style={[
+            styles.asistenciaText,
+            estado === 'asistida'
+              ? styles.qrText
+              : estado === 'cancelada'
+              ? styles.manualText
+              : styles.estadoGenerico,
+          ]}
+        >
+          Estado: {estado}
         </Text>
+        {direccion && (
+          <TouchableOpacity
+            style={styles.mapButton}
+            onPress={() => handleOpenMaps(direccion, clase.Sede?.nombre || sede)}
+          >
+            <Text style={styles.mapButtonText}>📍 Cómo llegar</Text>
+          </TouchableOpacity>
+        )}
         
         {yaCalificada && (
           <View style={styles.calificacionContainer}>
@@ -199,7 +230,7 @@ const HistorialScreen = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadAsistencias(true);
+    loadHistorial(true);
   };
 
   const abrirModalCalificacion = (asistencia) => {
@@ -245,7 +276,7 @@ const HistorialScreen = () => {
       Alert.alert('¡Gracias!', 'Tu calificación fue enviada exitosamente.');
       cerrarModal();
       await loadCalificaciones();
-      loadAsistencias(true);
+      loadHistorial(true);
     } catch (error) {
       Alert.alert(
         'Error',
@@ -461,6 +492,22 @@ const styles = StyleSheet.create({
     manualText: {
         color: '#f59e0b',
         fontWeight: '600',
+    },
+    estadoGenerico: {
+      color: '#475569',
+      fontWeight: '600',
+    },
+    mapButton: {
+      marginTop: 8,
+      paddingVertical: 8,
+      paddingHorizontal: 12,
+      backgroundColor: '#e0f2fe',
+      borderRadius: 8,
+      alignSelf: 'flex-start',
+    },
+    mapButtonText: {
+      color: '#0284c7',
+      fontWeight: '600',
     },
     comentario: {
         fontSize: 13,
