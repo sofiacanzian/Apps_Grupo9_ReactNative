@@ -26,7 +26,6 @@ const connectDB = async () => {
         require('../models/reserva.model');
         require('../models/asistencia.model');
         require('../models/noticia.model');
-<<<<<<< HEAD
         
         // --- 2. SINCRONIZAR LA BASE DE DATOS (OPCIONAL) ---
         // Solo sincronizar si está explícitamente habilitado para evitar deadlocks
@@ -52,19 +51,6 @@ const connectDB = async () => {
         console.error('❌ Error al conectar/sincronizar la base de datos:', error.message);
         // No salir del proceso, solo loguear el error
         // Las tablas ya existen, solo falló el sync
-=======
-
-        // --- 2. SINCRONIZAR LA BASE DE DATOS (UNA SOLA VEZ) ---
-        // Usamos sync sin alter ni force para evitar errores de "too many keys"
-        // Las tablas ya deberían existir de los scripts de seed
-        await sequelize.sync({ force: false, alter: false });
-        console.log("✅ Modelos de tablas sincronizados con la base de datos.");
-
-    } catch (error) {
-        console.error('❌ Error al conectar/sincronizar la base de datos:', error.message);
-        // Si el servidor falla al arrancar por la DB, salir del proceso
-        process.exit(1);
->>>>>>> origin/main
     }
 };
 
