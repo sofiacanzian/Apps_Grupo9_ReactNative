@@ -9,7 +9,7 @@ const { sendUpcomingReminders } = require('../utils/reminder.service');
 const initReminderJob = () => {
     // Ejecutar cada 30 minutos: '*/30 * * * *'
     // Para pruebas puedes usar '* * * * *' (cada minuto)
-    cron.schedule('*/30 * * * *', async () => {
+    cron.schedule('* * * * *', async () => {
         console.log('🕐 [Reminder Job] Ejecutando revisión de recordatorios...');
         try {
             await sendUpcomingReminders();

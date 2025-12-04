@@ -36,17 +36,32 @@ WHERE email = 'sofia@ritmofit.com';
 **B. Crea una clase que comience en ~1 hora:**
 ```sql
 -- Inserta una clase para HOY a la hora actual + 1 hora
-INSERT INTO clases (nombre, descripcion, instructor_id, sede_id, fecha, hora_inicio, hora_fin, capacidad_maxima, cupos_disponibles, createdAt, updatedAt)
-VALUES (
+INSERT INTO clases (
+    nombre,
+    disciplina,
+    descripcion,
+    fecha,
+    hora_inicio,
+    duracion_minutos,
+    cupo_maximo,
+    nivel,
+    imagen_url,
+    sedeId,
+    instructorId,
+    createdAt,
+    updatedAt
+) VALUES (
     'Clase de Prueba - Recordatorios',
+    'Funcional',                              -- disciplina libre, ajusta según necesites
     'Para probar notificaciones push',
-    1,  -- instructor_id (ajusta según tu DB)
-    1,  -- sede_id (ajusta según tu DB)
-    CURDATE(),  -- hoy
-    ADDTIME(CURTIME(), '01:30:00'),  -- 1.5 horas desde ahora
-    ADDTIME(CURTIME(), '02:30:00'),  -- 2.5 horas desde ahora
-    20,
-    20,
+    CURDATE(),                                -- hoy
+    ADDTIME(CURTIME(), '01:30:00'),           -- empieza en 1.5 h
+    90,                                       -- duración (en minutos)
+    20,                                       -- cupo máximo
+    'intermedio',                             -- principiante | intermedio | avanzado
+    NULL,                                     -- o una URL si querés imagen
+    1,                                        -- sedeId existente
+    1,                                        -- instructorId existente
     NOW(),
     NOW()
 );

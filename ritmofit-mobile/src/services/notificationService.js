@@ -5,11 +5,12 @@ import Constants from 'expo-constants';
 const AndroidImportance = Notifications.AndroidImportance ?? Notifications.AndroidImportanceDefault;
 
 Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-        shouldPlaySound: false,
-        shouldSetBadge: false,
-        shouldShowAlert: true,
-    }),
+  handleNotification: async () => ({
+    shouldShowBanner: true,   // reemplaza al antiguo shouldShowAlert
+    shouldShowList: true,     // opcional: muestra en la Notification Center/List
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
 });
 
 let permissionRequested = false;
