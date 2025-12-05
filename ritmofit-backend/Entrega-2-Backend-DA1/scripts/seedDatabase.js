@@ -1,5 +1,6 @@
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
@@ -10,24 +11,38 @@ const Clase = require('../models/clase.model');
 const Reserva = require('../models/reserva.model');
 const Noticia = require('../models/noticia.model');
 const Asistencia = require('../models/asistencia.model');
-const Notificacion = require('../models/notificacion.model');
 const Calificacion = require('../models/calificacion.model');
+const Notificacion = require('../models/notificacion.model');
+
+const PRESERVED_EMAIL = 'llacheta@uade.edu.ar';
+const PRESERVED_ID = 43;
+
+const PRESENTATION_DATE = process.env.SEED_PRESENTATION_DATE || '2025-12-05T12:00:00-03:00';
+const baseNow = (() => {
+    const parsed = new Date(PRESENTATION_DATE);
+    if (Number.isNaN(parsed.getTime())) {
+        return new Date();
+    }
+    return parsed;
+})();
+
+const cloneDate = (date) => new Date(date.getTime());
+const shiftDate = (date, { months = 0, days = 0, hours = 0, minutes = 0 } = {}) => {
+    const next = cloneDate(date);
+    if (months) next.setMonth(next.getMonth() + months);
+    if (days) next.setDate(next.getDate() + days);
+    if (hours) next.setHours(next.getHours() + hours);
+    if (minutes) next.setMinutes(next.getMinutes() + minutes);
+    return next;
+};
 
 const withSeconds = (time) => (time.length === 8 ? time : `${time}:00`);
 const formatDate = (date) => date.toISOString().split('T')[0];
-const addDays = (offset) => {
-    const base = new Date();
-    base.setHours(12, 0, 0, 0);
-    base.setDate(base.getDate() + offset);
-    return base;
-};
-const addHoursFromNow = (hours) => {
-    const stamp = new Date();
-    stamp.setHours(stamp.getHours() + hours);
-    return stamp;
-};
+const formatTime = (date) => date.toTimeString().split(' ')[0];
+const addDays = (offset, reference = baseNow) => shiftDate(reference, { days: offset });
+const addHoursFromBase = (hours, reference = baseNow) => shiftDate(reference, { hours });
 const getDecemberRange = () => {
-    const now = new Date();
+    const now = baseNow;
     let year = now.getFullYear();
     const decemberEndThisYear = new Date(year, 11, 31, 23, 59, 59, 999);
     if (now > decemberEndThisYear) {
@@ -38,10 +53,36 @@ const getDecemberRange = () => {
     return { start, end, year };
 };
 
-const clearTables = async (transaction) => {
-    const tables = [Asistencia, Calificacion, Reserva, Notificacion, Clase, Noticia, User, Sede];
+const locateUserToPreserve = async (transaction) => {
+    let preserved = await User.findOne({ where: { email: PRESERVED_EMAIL }, transaction });
+    if (preserved) {
+        console.log(`   - Se preservara el usuario ${preserved.email}`);
+        return preserved;
+    }
+
+    if (PRESERVED_ID) {
+        preserved = await User.findByPk(PRESERVED_ID, { transaction });
+        if (preserved) {
+            console.log(`   - Se preservara el usuario con id ${PRESERVED_ID}`);
+            return preserved;
+        }
+    }
+
+    console.log('   - No se encontro un usuario existente para preservar.');
+    return null;
+};
+
+const clearTables = async (transaction, preservedUser) => {
+    console.log('Limpiando tablas antes del seed...');
+    const tables = [Asistencia, Calificacion, Reserva, Notificacion, Clase, Noticia, Sede];
     for (const model of tables) {
         await model.destroy({ where: {}, force: true, truncate: false, transaction });
+    }
+
+    const userWhere = preservedUser ? { id: { [Op.ne]: preservedUser.id } } : {};
+    await User.destroy({ where: userWhere, force: true, truncate: false, transaction });
+    if (preservedUser) {
+        await preservedUser.reload({ transaction });
     }
 };
 
@@ -95,7 +136,7 @@ const createSedes = async (transaction) => {
     return sedes;
 };
 
-const createUsers = async (transaction) => {
+const createUsers = async (transaction, preservedUser) => {
     const userSeed = [
         {
             alias: 'admin',
@@ -209,20 +250,56 @@ const createUsers = async (transaction) => {
             direccion: 'Montaneses 900, Nuñez',
             fechaNacimiento: '1990-01-30',
             foto_url: 'https://i.pravatar.cc/150?img=52'
+        },
+        {
+            alias: 'agustin',
+            nombre: 'Agustin Vidal',
+            username: 'agus.vidal',
+            email: 'agustin@ritmofit.com',
+            rol: 'socio',
+            password: 'Socio123!',
+            pin: '9999',
+            telefono: '011-4100-7777',
+            direccion: 'Amenabar 2300, Belgrano',
+            fechaNacimiento: '1994-05-11',
+            foto_url: 'https://i.pravatar.cc/150?img=57'
+        },
+        {
+            alias: 'julieta',
+            nombre: 'Julieta Molina',
+            username: 'juli.fit',
+            email: 'julieta@ritmofit.com',
+            rol: 'socio',
+            password: 'Socio123!',
+            pin: '1010',
+            telefono: '011-4100-8888',
+            direccion: 'Virrey del Pino 1500, Palermo',
+            fechaNacimiento: '1998-09-04',
+            foto_url: 'https://i.pravatar.cc/150?img=27'
         }
     ];
 
     const users = {};
     for (const user of userSeed) {
         const { alias, password, pin, ...payload } = user;
-        if (password) payload.password_hash = bcrypt.hashSync(password, 10);
-        if (pin) payload.pin_hash = bcrypt.hashSync(String(pin), 10);
+        payload.password_hash = bcrypt.hashSync(password, 10);
+        payload.pin_hash = bcrypt.hashSync(String(pin), 10);
         payload.email_verificado = true;
         const record = await User.create(payload, { transaction });
         users[alias] = record;
     }
-    console.log(`   - Usuarios creados: ${Object.keys(users).length}`);
+
+    if (preservedUser) {
+        users.llacheta = preservedUser;
+    }
+
+    console.log(`   - Usuarios creados (sin contar el preservado): ${userSeed.length}`);
     return users;
+};
+
+const registerClase = async ({ alias, data, clasesPorAlias, transaction }) => {
+    const record = await Clase.create(data, { transaction });
+    clasesPorAlias[alias] = { record, fecha: data.fecha };
 };
 
 const createClases = async (transaction, sedes, users) => {
@@ -230,6 +307,7 @@ const createClases = async (transaction, sedes, users) => {
     const daysInDecember = new Date(decemberYear, 12, 0).getDate();
     const slotKey = (fecha, hora) => `${fecha}|${hora}`;
     const usedSlots = new Set();
+    const clasesPorAlias = {};
 
     const featuredTemplates = [
         {
@@ -350,7 +428,7 @@ const createClases = async (transaction, sedes, users) => {
         {
             nombreBase: 'December Ride',
             disciplina: 'Spinning',
-            descripcion: 'Sesión de potencia con métricas en vivo.',
+            descripcion: 'Sesion de potencia con metricas en vivo.',
             hora: '07:00',
             duracion: 45,
             cupo: 24,
@@ -362,7 +440,7 @@ const createClases = async (transaction, sedes, users) => {
         {
             nombreBase: 'Balance & Core',
             disciplina: 'Yoga',
-            descripcion: 'Secuencia guiada para cerrar el día.',
+            descripcion: 'Secuencia guiada para cerrar el dia.',
             hora: '18:00',
             duracion: 60,
             cupo: 20,
@@ -374,7 +452,7 @@ const createClases = async (transaction, sedes, users) => {
         {
             nombreBase: 'Metcon Circuit',
             disciplina: 'Funcional',
-            descripcion: 'Circuito híbrido fuerza + cardio.',
+            descripcion: 'Circuito hibrido fuerza + cardio.',
             hora: '13:15',
             duracion: 40,
             cupo: 18,
@@ -386,7 +464,7 @@ const createClases = async (transaction, sedes, users) => {
         {
             nombreBase: 'Box + HIIT',
             disciplina: 'Box',
-            descripcion: 'Golpes técnicos con trabajo de intervalos.',
+            descripcion: 'Golpes tecnicos con trabajo de intervalos.',
             hora: '19:30',
             duracion: 50,
             cupo: 16,
@@ -397,14 +475,11 @@ const createClases = async (transaction, sedes, users) => {
         }
     ];
 
-    const clasesPorAlias = {};
-
     for (const clase of featuredTemplates) {
         const { alias, dayOfMonth, hora, duracion, cupo, sedeAlias, instructorAlias, ...rest } = clase;
-        const fechaDate = new Date(decemberYear, 11, dayOfMonth, 12, 0, 0, 0);
-        const fecha = formatDate(fechaDate);
+        const fecha = formatDate(new Date(decemberYear, 11, dayOfMonth, 12, 0, 0, 0));
         const horaNormalizada = withSeconds(hora);
-        const record = await Clase.create({
+        const data = {
             ...rest,
             fecha,
             hora_inicio: horaNormalizada,
@@ -412,16 +487,15 @@ const createClases = async (transaction, sedes, users) => {
             cupo_maximo: cupo,
             sedeId: sedes[sedeAlias].id,
             instructorId: users[instructorAlias].id
-        }, { transaction });
-        clasesPorAlias[alias] = { record, fecha };
+        };
+        await registerClase({ alias, data, clasesPorAlias, transaction });
         usedSlots.add(slotKey(fecha, horaNormalizada));
     }
 
     const decemberEntries = [];
     for (let day = 1; day <= daysInDecember; day += 2) {
         const template = recurringPatterns[(day - 1) % recurringPatterns.length];
-        const fechaDate = new Date(decemberYear, 11, day, 12, 0, 0, 0);
-        const fecha = formatDate(fechaDate);
+        const fecha = formatDate(new Date(decemberYear, 11, day, 12, 0, 0, 0));
         const hora = withSeconds(template.hora);
         const slot = slotKey(fecha, hora);
         if (usedSlots.has(slot)) continue;
@@ -446,14 +520,125 @@ const createClases = async (transaction, sedes, users) => {
         await Clase.bulkCreate(decemberEntries, { transaction });
     }
 
+    const historialNow = baseNow;
+    const historialConfigs = [
+        {
+            alias: 'histCalificable',
+            nombre: 'Historial calificable',
+            disciplina: 'Yoga',
+            descripcion: 'Clase tomada hace menos de 24h para calificar.',
+            date: (() => {
+                const d = shiftDate(historialNow, { days: -1 });
+                d.setHours(21, 30, 0, 0);
+                return d;
+            })(),
+            duracion: 60,
+            cupo: 18,
+            nivel: 'principiante',
+            imagen_url: 'https://images.unsplash.com/photo-1526401485004-46910ecc8e51?w=600',
+            sedeAlias: 'palermo',
+            instructorAlias: 'valentina'
+        },
+        {
+            alias: 'histIncalificable',
+            nombre: 'Historial fuera de ventana',
+            disciplina: 'Funcional',
+            descripcion: 'Clase de hace 2 dias, ya no admite calificacion.',
+            date: (() => {
+                const d = shiftDate(historialNow, { days: -2 });
+                d.setHours(10, 0, 0, 0);
+                return d;
+            })(),
+            duracion: 50,
+            cupo: 20,
+            nivel: 'intermedio',
+            imagen_url: 'https://images.unsplash.com/photo-1558611848-73f7eb4001a1?w=600',
+            sedeAlias: 'centro',
+            instructorAlias: 'martina'
+        },
+        {
+            alias: 'histPasadoMes',
+            nombre: 'Historial antiguo',
+            disciplina: 'Pilates',
+            descripcion: 'Clase de hace 3 meses para vista "Todos".',
+            date: (() => {
+                const d = shiftDate(historialNow, { months: -3 });
+                d.setHours(18, 0, 0, 0);
+                return d;
+            })(),
+            duracion: 45,
+            cupo: 12,
+            nivel: 'avanzado',
+            imagen_url: 'https://images.unsplash.com/photo-1556817411-31ae72fa3ea0?w=600',
+            sedeAlias: 'belgrano',
+            instructorAlias: 'carlos'
+        }
+    ];
+
+    if (users.llacheta) {
+        historialConfigs.push({
+            alias: 'llachetaLateFlow',
+            nombre: 'Flow nocturno socios',
+            disciplina: 'Yoga',
+            descripcion: 'Sesion nocturna para mostrar calificacion pendiente.',
+            date: (() => {
+                const d = shiftDate(historialNow, { days: -1 });
+                d.setHours(21, 45, 0, 0);
+                return d;
+            })(),
+            duracion: 55,
+            cupo: 16,
+            nivel: 'intermedio',
+            imagen_url: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600',
+            sedeAlias: 'centro',
+            instructorAlias: 'martina'
+        });
+    }
+
+    for (const clase of historialConfigs) {
+        const { alias, date, duracion, cupo, sedeAlias, instructorAlias, ...rest } = clase;
+        const data = {
+            ...rest,
+            fecha: formatDate(date),
+            hora_inicio: formatTime(date),
+            duracion_minutos: duracion,
+            cupo_maximo: cupo,
+            sedeId: sedes[sedeAlias].id,
+            instructorId: users[instructorAlias].id
+        };
+        await registerClase({ alias, data, clasesPorAlias, transaction });
+    }
+
+    const reminderDate = shiftDate(baseNow, { minutes: 63 });
+    reminderDate.setSeconds(0, 0);
+    const reminderData = {
+        alias: 'recordatorioPush',
+        data: {
+            nombre: 'Recordatorio Push Test',
+            disciplina: 'Funcional',
+            descripcion: 'Generada para probar recordatorios y notificaciones.',
+            fecha: formatDate(reminderDate),
+            hora_inicio: formatTime(reminderDate),
+            duracion_minutos: 45,
+            cupo_maximo: 20,
+            nivel: 'intermedio',
+            imagen_url: 'https://images.unsplash.com/photo-1579758629938-03607ccdbaba?w=600',
+            sedeId: sedes.centro.id,
+            instructorId: users.diego.id
+        }
+    };
+    await registerClase({ ...reminderData, clasesPorAlias, transaction });
+
     console.log(`   - Clases destacadas creadas: ${featuredTemplates.length}`);
     console.log(`   - Clases calendario diciembre: ${decemberEntries.length}`);
+    console.log(`   - Clases especiales (historial + recordatorios): ${historialConfigs.length + 1}`);
 
     return {
         recordsByAlias: clasesPorAlias,
         totals: {
             featured: featuredTemplates.length,
-            december: decemberEntries.length
+            december: decemberEntries.length,
+            especiales: historialConfigs.length + 1
         }
     };
 };
@@ -489,20 +674,74 @@ const createReservas = async (transaction, users, clases) => {
             reservaOffsetHours: -10
         },
         {
-            alias: 'reservaSofiaPilates',
-            userAlias: 'sofia',
-            claseAlias: 'pilatesCore',
+            alias: 'reservaAgustinHiit',
+            userAlias: 'agustin',
+            claseAlias: 'hiitLunch',
             estado: 'activa',
-            reservaOffsetHours: -2
+            reservaOffsetHours: -1
+        },
+        {
+            alias: 'reservaJulietaEvening',
+            userAlias: 'julieta',
+            claseAlias: 'eveningFlow',
+            estado: 'activa',
+            reservaOffsetHours: -3
+        },
+        {
+            alias: 'reservaHistorialCalificable',
+            userAlias: 'sofia',
+            claseAlias: 'histCalificable',
+            estado: 'asistida',
+            reservaOffsetHours: -8
+        },
+        {
+            alias: 'reservaHistorialIncalificable',
+            userAlias: 'lucas',
+            claseAlias: 'histIncalificable',
+            estado: 'expirada',
+            reservaOffsetHours: -60
+        },
+        {
+            alias: 'reservaHistorialPasado',
+            userAlias: 'camila',
+            claseAlias: 'histPasadoMes',
+            estado: 'ausente',
+            reservaOffsetHours: -140
         }
     ];
 
+    if (users.llacheta) {
+        reservaSeed.push(
+            {
+                alias: 'reservaLlachetaPendiente',
+                userAlias: 'llacheta',
+                claseAlias: 'recordatorioPush',
+                estado: 'activa',
+                reservaDate: shiftDate(baseNow, { hours: -3 })
+            },
+            {
+                alias: 'reservaLlachetaCalificable',
+                userAlias: 'llacheta',
+                claseAlias: 'llachetaLateFlow',
+                estado: 'asistida',
+                reservaDate: shiftDate(baseNow, { days: -1, hours: -4 })
+            },
+            {
+                alias: 'reservaLlachetaCancelada',
+                userAlias: 'llacheta',
+                claseAlias: 'functionalExpress',
+                estado: 'cancelada',
+                reservaDate: shiftDate(baseNow, { days: -2, hours: -6 })
+            }
+        );
+    }
+
     const reservas = {};
     for (const reserva of reservaSeed) {
-        const { alias, userAlias, claseAlias, reservaOffsetHours, ...rest } = reserva;
+        const { alias, userAlias, claseAlias, reservaOffsetHours, reservaDate, ...rest } = reserva;
         const record = await Reserva.create({
             ...rest,
-            fecha_reserva: addHoursFromNow(reservaOffsetHours),
+            fecha_reserva: reservaDate || addHoursFromBase(reservaOffsetHours),
             userId: users[userAlias].id,
             claseId: clases[claseAlias].record.id
         }, { transaction });
@@ -534,8 +773,39 @@ const createAsistencias = async (transaction, users, clases) => {
             checkin: '18:55:00',
             duracion: 60,
             confirmado_por_qr: false
+        },
+        {
+            userAlias: 'sofia',
+            claseAlias: 'histCalificable',
+            checkin: '21:20:00',
+            duracion: 60,
+            confirmado_por_qr: true
+        },
+        {
+            userAlias: 'lucas',
+            claseAlias: 'histIncalificable',
+            checkin: '10:05:00',
+            duracion: 50,
+            confirmado_por_qr: true
+        },
+        {
+            userAlias: 'camila',
+            claseAlias: 'histPasadoMes',
+            checkin: '18:02:00',
+            duracion: 45,
+            confirmado_por_qr: false
         }
     ];
+
+    if (users.llacheta) {
+        asistenciaSeed.push({
+            userAlias: 'llacheta',
+            claseAlias: 'llachetaLateFlow',
+            checkin: '21:40:00',
+            duracion: 55,
+            confirmado_por_qr: true
+        });
+    }
 
     for (const asistencia of asistenciaSeed) {
         const { userAlias, claseAlias, checkin, duracion, ...rest } = asistencia;
@@ -557,19 +827,22 @@ const createCalificaciones = async (transaction, users, clases) => {
             userAlias: 'lucas',
             claseAlias: 'powerCycling',
             rating: 5,
+            ratingInstructor: 5,
             comentario: 'Clase intensa y bien guiada.'
         },
         {
             userAlias: 'camila',
             claseAlias: 'mobilityLab',
             rating: 4,
+            ratingInstructor: 4,
             comentario: 'Mejoro mi movilidad cada semana.'
         },
         {
             userAlias: 'sofia',
-            claseAlias: 'eveningFlow',
+            claseAlias: 'histCalificable',
             rating: 5,
-            comentario: 'Perfecta para relajar despues del trabajo.'
+            ratingInstructor: 5,
+            comentario: 'Experiencia impecable y super personalizada.'
         }
     ];
 
@@ -585,7 +858,7 @@ const createCalificaciones = async (transaction, users, clases) => {
 };
 
 const createNoticias = async (transaction) => {
-    const now = new Date();
+    const now = cloneDate(baseNow);
     const nextWeek = addDays(7);
     const twoDays = addDays(2);
 
@@ -635,6 +908,40 @@ const createNoticias = async (transaction) => {
             fecha_publicacion: now,
             autor: 'Equipo Comercial',
             vigente: true
+        },
+        {
+            titulo: 'Apertura de nueva sede RitmoFit Palermo',
+            descripcion: 'Inauguramos con clases gratuitas el fin de semana.',
+            contenido: 'Habra clases gratuitas y promociones especiales durante la primera semana.',
+            tipo: 'noticia',
+            imagen_url: 'https://images.unsplash.com/photo-1526403224731-5d7d0b9b7f7f?w=800',
+            fecha_publicacion: now,
+            autor: 'Equipo RitmoFit',
+            vigente: true,
+            destacada: true
+        },
+        {
+            titulo: 'Promocion 2x1 en Spinning',
+            descripcion: 'Llevate a un amigo y ambos pagan una sola clase.',
+            contenido: 'Promo valida en sedes seleccionadas hasta agotar cupos.',
+            tipo: 'promocion',
+            imagen_url: 'https://images.unsplash.com/photo-1508948956644-1f9b39b2b2d4?w=800',
+            fecha_publicacion: now,
+            fecha_vencimiento: nextWeek,
+            autor: 'Marketing',
+            vigente: true,
+            codigo_promocion: 'SPIN2X1'
+        },
+        {
+            titulo: 'Evento con instructor internacional',
+            descripcion: 'Clase magistral con invitado desde Brasil.',
+            contenido: 'Cupos limitados, reserva tu lugar ahora.',
+            tipo: 'evento',
+            imagen_url: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800',
+            fecha_publicacion: now,
+            fecha_evento: addDays(1),
+            autor: 'Comunidad',
+            vigente: true
         }
     ];
 
@@ -673,17 +980,54 @@ const createNotificaciones = async (transaction, users, clases, reservas) => {
                 claseId: clases.powerCycling.record.id,
                 hora_nueva: '18:20'
             }
+        },
+        {
+            userAlias: 'agustin',
+            tipo: 'reminder',
+            titulo: 'Recordatorio HIIT',
+            mensaje: 'Lunch HIIT Blast arranca en 1 hora, hidratate bien.',
+            data: {
+                claseId: clases.hiitLunch.record.id,
+                fecha: clases.hiitLunch.fecha
+            }
+        },
+        {
+            userAlias: 'julieta',
+            tipo: 'reminder',
+            titulo: 'Nueva sede',
+            mensaje: 'Recorda visitar la apertura de Palermo este finde.',
+            data: {
+                featuredNoticia: 'Apertura de nueva sede RitmoFit Palermo'
+            }
         }
     ];
 
-    for (const notificacion of notificacionSeed) {
-        const { userAlias, ...rest } = notificacion;
-        await Notificacion.create({
-            ...rest,
-            userId: users[userAlias].id
-        }, { transaction });
+    if (users.llacheta) {
+        notificacionSeed.push({
+            userAlias: 'llacheta',
+            tipo: 'reminder',
+            titulo: 'Califica tu clase de anoche',
+            mensaje: 'Tu Flow nocturno del 4/12 sigue disponible para calificar.',
+            data: {
+                claseId: clases.llachetaLateFlow?.record.id,
+                fecha: clases.llachetaLateFlow?.fecha
+            }
+        });
     }
-    console.log(`   - Notificaciones creadas: ${notificacionSeed.length}`);
+
+    let created = 0;
+    for (const notif of notificacionSeed) {
+        const { userAlias, ...payload } = notif;
+        const owner = users[userAlias];
+        if (!owner) continue;
+        await Notificacion.create({
+            ...payload,
+            userId: owner.id
+        }, { transaction });
+        created += 1;
+    }
+
+    console.log(`   - Notificaciones creadas: ${created}`);
 };
 
 const seedDatabase = async () => {
@@ -694,10 +1038,11 @@ const seedDatabase = async () => {
     const transaction = await sequelize.transaction();
 
     try {
-        await clearTables(transaction);
+        const preservedUser = await locateUserToPreserve(transaction);
+        await clearTables(transaction, preservedUser);
 
         const sedes = await createSedes(transaction);
-        const users = await createUsers(transaction);
+        const users = await createUsers(transaction, preservedUser);
         const { recordsByAlias: clases, totals: clasesTotals } = await createClases(transaction, sedes, users);
         const reservas = await createReservas(transaction, users, clases);
         await createAsistencias(transaction, users, clases);
@@ -709,11 +1054,12 @@ const seedDatabase = async () => {
         console.log('Seed ejecutado correctamente.');
         console.log('Resumen:');
         console.log(`   * Total sedes: ${Object.keys(sedes).length}`);
-        console.log(`   * Total usuarios: ${Object.keys(users).length}`);
-        const totalClases = clasesTotals.featured + clasesTotals.december;
+        console.log(`   * Total usuarios (incluye preservado si existia): ${Object.keys(users).length}`);
+        const totalClases = clasesTotals.featured + clasesTotals.december + clasesTotals.especiales;
         console.log(`   * Total clases: ${totalClases}`);
-        console.log(`       - Destacadas (alias): ${clasesTotals.featured}`);
+        console.log(`       - Destacadas: ${clasesTotals.featured}`);
         console.log(`       - Calendario diciembre: ${clasesTotals.december}`);
+        console.log(`       - Escenarios especiales: ${clasesTotals.especiales}`);
         console.log(`   * Total reservas: ${Object.keys(reservas).length}`);
         process.exit(0);
     } catch (error) {
