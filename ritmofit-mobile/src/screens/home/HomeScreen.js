@@ -246,7 +246,7 @@ export const HomeScreen = ({ navigation }) => {
         const sedeNombre = item.Sede?.nombre ?? item.sede ?? '—';
         const cuposDisponibles = item.cupo_disponible ?? item.cupos_disponibles ?? item.cupo_maximo ?? 0;
         const cupoMaximo = item.cupo_maximo ?? item.cupos_totales ?? '—';
-        const fecha = item.fecha ? new Date(item.fecha).toLocaleDateString('es-AR') : '—';
+        const fecha = item.fecha ?? '—';
         const duracion = item.duracion_minutos ? `${item.duracion_minutos} min` : '—';
         const disponible = cuposDisponibles > 0;
         const nivel = item.nivel || 'principiante';

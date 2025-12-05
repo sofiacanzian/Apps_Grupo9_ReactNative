@@ -11,9 +11,12 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { registerCheckIn } from '../../services/reservaService';
 import { getClaseById } from '../../services/claseService';
 
-const parseQrPayload = (rawData) => {
+const parseQrPayload = (rawData = '') => {
+    const data = rawData.trim();
+    if (!data) return null;
+
     try {
-        const parsed = JSON.parse(rawData);
+        const parsed = JSON.parse(data);
         const claseId = parsed.claseId || parsed.clase_id || parsed.id;
         return {
             claseId,
@@ -21,8 +24,15 @@ const parseQrPayload = (rawData) => {
             horario: parsed.horario || parsed.hora_inicio || '',
         };
     } catch (_err) {
-        if (/^\d+$/.test(rawData)) {
-            return { claseId: Number(rawData) };
+        if (/^\d+$/.test(data)) {
+            return { claseId: Number(data) };
+        }
+
+        const normalized = data.includes('=') ? data.replace(/^.*?\?/, '') : data;
+        const params = new URLSearchParams(normalized);
+        const claseId = params.get('claseId') || params.get('clase_id') || params.get('id');
+        if (claseId) {
+            return { claseId: Number(claseId) };
         }
         return null;
     }
