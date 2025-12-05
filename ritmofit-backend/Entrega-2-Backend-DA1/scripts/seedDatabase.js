@@ -629,16 +629,64 @@ const createClases = async (transaction, sedes, users) => {
     };
     await registerClase({ ...reminderData, clasesPorAlias, transaction });
 
+    let demoClassCount = 0;
+    if (users.llacheta) {
+        const demoConfigs = [
+            {
+                alias: 'llachetaDemoYoga',
+                nombre: 'Clase especial 4/12',
+                disciplina: 'Yoga',
+                descripcion: 'Clase de prueba para ratings',
+                date: shiftDate(baseNow, { days: -1, hours: -3 }),
+                duracion: 90,
+                cupo: 20,
+                nivel: 'intermedio',
+                imagen_url: null,
+                sedeAlias: 'centro',
+                instructorAlias: 'martina'
+            },
+            {
+                alias: 'llachetaDemoFuncional',
+                nombre: 'Funcional express demo',
+                disciplina: 'Funcional',
+                descripcion: 'Caso demo reservas/cancelaciones',
+                date: shiftDate(baseNow, { hours: 1, minutes: 30 }),
+                duracion: 60,
+                cupo: 18,
+                nivel: 'intermedio',
+                imagen_url: null,
+                sedeAlias: 'palermo',
+                instructorAlias: 'diego'
+            }
+        ];
+
+        for (const clase of demoConfigs) {
+            const { alias, date, duracion, cupo, sedeAlias, instructorAlias, ...rest } = clase;
+            const data = {
+                ...rest,
+                fecha: formatDate(date),
+                hora_inicio: formatTime(date),
+                duracion_minutos: duracion,
+                cupo_maximo: cupo,
+                sedeId: sedes[sedeAlias].id,
+                instructorId: users[instructorAlias].id
+            };
+            await registerClase({ alias, data, clasesPorAlias, transaction });
+        }
+
+        demoClassCount = demoConfigs.length;
+    }
+
     console.log(`   - Clases destacadas creadas: ${featuredTemplates.length}`);
     console.log(`   - Clases calendario diciembre: ${decemberEntries.length}`);
-    console.log(`   - Clases especiales (historial + recordatorios): ${historialConfigs.length + 1}`);
+    console.log(`   - Clases especiales (historial + recordatorios + demo): ${historialConfigs.length + 1 + demoClassCount}`);
 
     return {
         recordsByAlias: clasesPorAlias,
         totals: {
             featured: featuredTemplates.length,
             december: decemberEntries.length,
-            especiales: historialConfigs.length + 1
+            especiales: historialConfigs.length + 1 + demoClassCount
         }
     };
 };
