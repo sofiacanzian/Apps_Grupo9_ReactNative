@@ -637,7 +637,7 @@ const createClases = async (transaction, sedes, users) => {
                 nombre: 'Clase especial 4/12',
                 disciplina: 'Yoga',
                 descripcion: 'Clase de prueba para ratings',
-                date: shiftDate(baseNow, { days: -1, hours: -3 }),
+                date: shiftDate(baseNow, { days: -1, hours: 9 }),
                 duracion: 90,
                 cupo: 20,
                 nivel: 'intermedio',
@@ -780,6 +780,20 @@ const createReservas = async (transaction, users, clases) => {
                 claseAlias: 'functionalExpress',
                 estado: 'cancelada',
                 reservaDate: shiftDate(baseNow, { days: -2, hours: -6 })
+            },
+            {
+                alias: 'reservaLlachetaDemoYoga',
+                userAlias: 'llacheta',
+                claseAlias: 'llachetaDemoYoga',
+                estado: 'asistida',
+                reservaDate: shiftDate(baseNow, { days: -1, hours: 6 })
+            },
+            {
+                alias: 'reservaLlachetaDemoFuncional',
+                userAlias: 'llacheta',
+                claseAlias: 'llachetaDemoFuncional',
+                estado: 'asistida',
+                reservaDate: shiftDate(baseNow, { minutes: -90 })
             }
         );
     }
@@ -851,6 +865,18 @@ const createAsistencias = async (transaction, users, clases) => {
             claseAlias: 'llachetaLateFlow',
             checkin: '21:40:00',
             duracion: 55,
+            confirmado_por_qr: true
+        }, {
+            userAlias: 'llacheta',
+            claseAlias: 'llachetaDemoYoga',
+            checkin: '21:00:00',
+            duracion: 90,
+            confirmado_por_qr: true
+        }, {
+            userAlias: 'llacheta',
+            claseAlias: 'llachetaDemoFuncional',
+            checkin: '13:25:00',
+            duracion: 60,
             confirmado_por_qr: true
         });
     }
