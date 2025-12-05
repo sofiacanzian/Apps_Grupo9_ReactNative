@@ -3,9 +3,14 @@
 
 let authToken = null;
 let logoutHandler = null;
+let logoutInProgress = false; // evita llamadas repetidas al handler de logout
 
 export const setToken = (token) => {
   authToken = token || null;
+  if (token) {
+    // si volvemos a setear un token (re-login), permitimos futuros logout
+    logoutInProgress = false;
+  }
 };
 
 export const getToken = () => authToken;
@@ -20,6 +25,8 @@ export const registerLogout = (handler) => {
 };
 
 export const invokeLogout = () => {
+  if (logoutInProgress) return; // ya disparado
+  logoutInProgress = true;
   if (typeof logoutHandler === 'function') {
     try {
       logoutHandler();

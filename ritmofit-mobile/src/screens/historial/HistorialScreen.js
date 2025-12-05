@@ -13,7 +13,7 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { getReservas } from '../../services/reservaService';
+import { getAsistencias } from '../../services/reservaService';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
@@ -144,13 +144,13 @@ const HistorialScreen = () => {
   const loadHistorial = async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
-      const response = await getReservas({ tipo: 'historial' });
-      const reservas = Array.isArray(response)
+      const response = await getAsistencias();
+      const asistenciasRaw = Array.isArray(response)
         ? response
         : Array.isArray(response?.data)
         ? response.data
         : [];
-      setAsistencias(applyRangoFilter(reservas));
+      setAsistencias(applyRangoFilter(asistenciasRaw));
       
       await loadCalificaciones();
       await loadPendientes();
@@ -196,7 +196,9 @@ const HistorialScreen = () => {
     const duracion = clase.duracion_minutos || item.duracion_minutos || '—';
     const disciplina = clase.disciplina || 'General';
     const instructor = clase.instructor?.nombre || 'Profesor asignado';
-    const estado = item.estado || '—';
+    // Cuando los datos vienen desde Asistencia no existe `estado`.
+    // Derivamos el estado como 'asistida' si existe una asistencia registrada.
+    const estado = item.estado || (typeof item.confirmado_por_qr !== 'undefined' ? 'asistida' : '—');
 
     const fechaHoraFinClase = item.fecha_hora_fin
       ? parseDateTime(item.fecha_hora_fin)

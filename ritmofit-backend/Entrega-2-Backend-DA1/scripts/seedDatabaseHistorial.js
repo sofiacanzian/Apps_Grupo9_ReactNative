@@ -13,16 +13,12 @@ const seedHistorial = async () => {
     await sequelize.sync({ force: false });
     console.log('✅ Modelos sincronizados');
 
-    // Obtener primer usuario disponible o crear uno de prueba
-    let usuario = await User.findOne();
+    // Buscar usuario específico por email (Santino)
+    const targetEmail = 'S.travasso04@gmail.com';
+    const usuario = await User.findOne({ where: { email: targetEmail } });
     if (!usuario) {
-      console.log('⚠️ No se encontraron usuarios. Creando usuario de prueba...');
-      usuario = await User.create({
-        nombre: 'Usuario Test',
-        email: 'test@ritmofit.com',
-        rol: 'socio',
-        activo: true
-      });
+      console.error('el usuario santino no existe');
+      process.exit(1);
     }
     const userId = usuario.id;
 
