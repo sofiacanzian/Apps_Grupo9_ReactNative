@@ -3,6 +3,7 @@ const router = express.Router();
 const calificacionController = require('../controllers/calificacion.controller');
 
 router.post('/', calificacionController.createCalificacion);
+router.get('/user/:userId/pending', calificacionController.getPendingCalificaciones);
 router.get('/user/:userId', calificacionController.getUserCalificaciones);
 router.get('/clase/:claseId', calificacionController.getClaseCalificaciones);
 

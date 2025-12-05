@@ -14,12 +14,24 @@ const Calificacion = sequelize.define('Calificacion', {
     allowNull: false,
     validate: { min: 1, max: 5 },
   },
+  ratingInstructor: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+    validate: { min: 1, max: 5 },
+  },
   comentario: {
     type: DataTypes.TEXT,
     allowNull: true,
   }
 }, {
   tableName: 'calificaciones',
+  indexes: [
+    {
+      unique: true,
+      fields: ['userId', 'claseId'],
+      name: 'calificacion_user_clase_unique'
+    }
+  ]
 });
 
 // Relaciones

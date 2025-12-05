@@ -8,7 +8,8 @@ export const CalificacionScreen = ({ route, navigation }) => {
   const { claseId } = route.params;
   const { user } = useAuthStore();
   const [clase, setClase] = useState(null);
-  const [rating, setRating] = useState(0);
+  const [ratingClase, setRatingClase] = useState(0);
+  const [ratingInstructor, setRatingInstructor] = useState(0);
   const [comentario, setComentario] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -25,8 +26,8 @@ export const CalificacionScreen = ({ route, navigation }) => {
   }, [claseId]);
 
   const enviarCalificacion = async () => {
-    if (rating < 1 || rating > 5) {
-      Alert.alert('Calificación inválida', 'Selecciona entre 1 y 5 estrellas.');
+    if (ratingClase < 1 || ratingInstructor < 1) {
+      Alert.alert('Calificación incompleta', 'Califica la clase y al profesor con 1 a 5 estrellas.');
       return;
     }
 
@@ -35,7 +36,8 @@ export const CalificacionScreen = ({ route, navigation }) => {
       await api.post('/calificaciones', {
         userId: user.id,
         claseId,
-        rating,
+        ratingClase,
+        ratingInstructor,
         comentario,
       });
       Alert.alert('Gracias', 'Tu calificación fue enviada.');
@@ -47,19 +49,17 @@ export const CalificacionScreen = ({ route, navigation }) => {
     }
   };
 
-  const renderStars = () => {
-    return (
-      <View style={styles.starsRow}>
-        {[1, 2, 3, 4, 5].map((num) => (
-          <TouchableOpacity key={num} onPress={() => setRating(num)}>
-            <Text style={[styles.star, rating >= num ? styles.starSelected : styles.starUnselected]}>
-              ★
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
+  const renderStars = (value, onChange) => (
+    <View style={styles.starsRow}>
+      {[1, 2, 3, 4, 5].map((num) => (
+        <TouchableOpacity key={num} onPress={() => onChange(num)}>
+          <Text style={[styles.star, value >= num ? styles.starSelected : styles.starUnselected]}>
+            ★
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   if (!clase) {
     return (
@@ -75,8 +75,11 @@ export const CalificacionScreen = ({ route, navigation }) => {
       <Text style={styles.claseNombre}>{clase.nombre}</Text>
       <Text style={styles.claseDetalle}>{clase.disciplina} • {clase.fecha}</Text>
 
-      <Text style={styles.label}>Tu calificación</Text>
-      {renderStars()}
+      <Text style={styles.label}>Calificación de la clase</Text>
+      {renderStars(ratingClase, setRatingClase)}
+
+      <Text style={styles.label}>Calificación del profesor</Text>
+      {renderStars(ratingInstructor, setRatingInstructor)}
 
       <Text style={styles.label}>Comentario (opcional)</Text>
       <TextInput
@@ -87,7 +90,11 @@ export const CalificacionScreen = ({ route, navigation }) => {
         onChangeText={setComentario}
       />
 
-      <TouchableOpacity style={styles.button} onPress={enviarCalificacion} disabled={loading}>
+      <TouchableOpacity
+        style={[styles.button, (ratingClase === 0 || ratingInstructor === 0) && styles.buttonDisabled]}
+        onPress={enviarCalificacion}
+        disabled={loading || ratingClase === 0 || ratingInstructor === 0}
+      >
         {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Enviar</Text>}
       </TouchableOpacity>
     </View>
@@ -102,6 +109,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
   input: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, padding: 12, marginBottom: 16, backgroundColor: '#fff' },
   button: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
   starsRow: { flexDirection: 'row', justifyContent: 'center', marginBottom: 16 },
   star: { fontSize: 32, marginHorizontal: 6 },

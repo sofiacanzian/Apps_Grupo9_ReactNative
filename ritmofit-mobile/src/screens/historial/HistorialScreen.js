@@ -17,6 +17,41 @@ import { getReservas } from '../../services/reservaService';
 import api from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 
+const buildLocalDate = (fecha, hora = '00:00') => {
+  if (!fecha) return null;
+  const [year, month, day] = fecha.split('-').map(Number);
+  const [hours, minutes] = hora.split(':').map(Number);
+  return new Date(year, (month || 1) - 1, day || 1, hours || 0, minutes || 0);
+};
+
+const parseDateTime = (dateTimeStr) => {
+  if (!dateTimeStr) return null;
+  const normalized = dateTimeStr.trim().replace(' ', 'T');
+  const [date, rawTime] = normalized.split('T');
+  if (!rawTime) {
+    return buildLocalDate(date, '00:00');
+  }
+
+  const withoutMillis = rawTime.replace('Z', '').split('.')[0];
+  const timeMatch = withoutMillis.match(/^(\d{2}):(\d{2})/);
+  const hours = timeMatch ? timeMatch[1] : '00';
+  const minutes = timeMatch ? timeMatch[2] : '00';
+
+  return buildLocalDate(date, `${hours}:${minutes}`);
+};
+
+const formatExpiryLabel = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleString('es-AR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 const RANGOS = [
   { key: 'mes', label: 'Último mes', dias: 30 },
   { key: 'todo', label: 'Todo' },
@@ -29,10 +64,12 @@ const HistorialScreen = () => {
   const [rango, setRango] = useState('mes');
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedAsistencia, setSelectedAsistencia] = useState(null);
-  const [rating, setRating] = useState(0);
+  const [ratingClase, setRatingClase] = useState(0);
+  const [ratingInstructor, setRatingInstructor] = useState(0);
   const [comentario, setComentario] = useState('');
   const [enviandoCalificacion, setEnviandoCalificacion] = useState(false);
-  const [calificaciones, setCalificaciones] = useState({}); 
+  const [calificaciones, setCalificaciones] = useState({});
+  const [pendingCalificaciones, setPendingCalificaciones] = useState({});
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -48,9 +85,9 @@ const HistorialScreen = () => {
 
     return reservasList.filter((reserva) => {
       const fechaInicio = reserva?.fecha_hora_inicio
-        ? new Date(reserva.fecha_hora_inicio)
+        ? parseDateTime(reserva.fecha_hora_inicio)
         : reserva?.Clase?.fecha
-        ? new Date(reserva.Clase.fecha)
+        ? buildLocalDate(reserva.Clase.fecha, reserva.Clase.hora_inicio)
         : null;
       if (!fechaInicio) return false;
       return fechaInicio >= fechaCorte;
@@ -71,7 +108,8 @@ const HistorialScreen = () => {
         const claseId = cal.claseId || cal.Clase?.id;
         if (claseId) {
           calificacionesMap[claseId] = {
-            rating: cal.rating,
+            ratingClase: cal.rating,
+            ratingInstructor: cal.ratingInstructor,
             comentario: cal.comentario,
           };
         }
@@ -79,6 +117,27 @@ const HistorialScreen = () => {
       setCalificaciones(calificacionesMap);
     } catch (error) {
       console.error('Error al cargar calificaciones:', error);
+    }
+  };
+
+  const loadPendientes = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await api.get(`/calificaciones/user/${user.id}/pending`);
+      const pendientesArray = Array.isArray(response.data)
+        ? response.data
+        : (Array.isArray(response.data?.data) ? response.data.data : []);
+
+      const pendientesMap = {};
+      pendientesArray.forEach((pendiente) => {
+        if (pendiente?.claseId) {
+          pendientesMap[pendiente.claseId] = pendiente;
+        }
+      });
+      setPendingCalificaciones(pendientesMap);
+    } catch (error) {
+      console.error('Error al cargar pendientes de calificación:', error);
     }
   };
 
@@ -94,6 +153,7 @@ const HistorialScreen = () => {
       setAsistencias(applyRangoFilter(reservas));
       
       await loadCalificaciones();
+      await loadPendientes();
     } catch (error) {
       Alert.alert('Error', error.message || 'Error al cargar historial');
     } finally {
@@ -117,9 +177,9 @@ const HistorialScreen = () => {
     const claseId = clase.id || item.claseId;
     const claseNombre = clase.nombre || item.clase_nombre || '—';
     const fechaInicio = item.fecha_hora_inicio
-      ? new Date(item.fecha_hora_inicio)
+      ? parseDateTime(item.fecha_hora_inicio)
       : clase.fecha
-      ? new Date(clase.fecha)
+      ? buildLocalDate(clase.fecha, clase.hora_inicio)
       : null;
     const fecha = fechaInicio
       ? fechaInicio.toLocaleDateString('es-AR', {
@@ -139,7 +199,7 @@ const HistorialScreen = () => {
     const estado = item.estado || '—';
 
     const fechaHoraFinClase = item.fecha_hora_fin
-      ? new Date(item.fecha_hora_fin)
+      ? parseDateTime(item.fecha_hora_fin)
       : fechaInicio && duracion
       ? new Date(fechaInicio.getTime() + Number(duracion) * 60000)
       : null;
@@ -148,9 +208,17 @@ const HistorialScreen = () => {
     const diferenciaHoras = fechaHoraFinClase
       ? (ahora - fechaHoraFinClase) / (1000 * 60 * 60)
       : Infinity;
-    const puedeCalificar = estado === 'asistida' && diferenciaHoras > 0 && diferenciaHoras <= 24;
     const calificacion = claseId ? calificaciones[claseId] : null;
+    const ratingClaseGuardado = calificacion?.ratingClase ?? calificacion?.rating ?? null;
+    const ratingInstructorGuardado = calificacion?.ratingInstructor ?? null;
     const yaCalificada = !!calificacion;
+    const pendiente = claseId ? pendingCalificaciones[claseId] : null;
+    const heuristicaDisponible = estado === 'asistida' && diferenciaHoras > 0 && diferenciaHoras <= 24;
+    const puedeCalificar = estado === 'asistida' && (pendiente || heuristicaDisponible);
+    const claseTermino = fechaHoraFinClase ? diferenciaHoras > 0 : false;
+    const mensajeEstadoCalificacion = !claseTermino && estado === 'asistida'
+      ? 'Podrás calificar al finalizar la clase'
+      : 'Calificación expirada';
     const puedeAbrirModal = puedeCalificar && !yaCalificada;
 
     return (
@@ -183,23 +251,48 @@ const HistorialScreen = () => {
             <Text style={styles.mapButtonText}>📍 Cómo llegar</Text>
           </TouchableOpacity>
         )}
+
+        {pendiente && !yaCalificada && (
+          <Text style={styles.pendienteWindow}>
+            Podés calificar hasta {formatExpiryLabel(pendiente.expiresAt)}
+          </Text>
+        )}
         
         {yaCalificada && (
           <View style={styles.calificacionContainer}>
-            <View style={styles.calificacionHeader}>
-              <Text style={styles.calificacionLabel}>Tu calificación:</Text>
+            <Text style={styles.calificacionLabel}>Tu calificación</Text>
+            <View style={styles.calificacionRow}>
+              <Text style={styles.calificacionSubLabel}>Clase</Text>
               <View style={styles.calificacionStars}>
                 {[1, 2, 3, 4, 5].map((num) => (
                   <Ionicons
                     key={num}
-                    name={calificacion.rating >= num ? 'star' : 'star-outline'}
+                    name={ratingClaseGuardado >= num ? 'star' : 'star-outline'}
                     size={18}
-                    color={calificacion.rating >= num ? '#fbbf24' : '#d1d5db'}
+                    color={ratingClaseGuardado >= num ? '#fbbf24' : '#d1d5db'}
                   />
                 ))}
-                <Text style={styles.calificacionRatingText}>{calificacion.rating}/5</Text>
+                <Text style={styles.calificacionRatingText}>{ratingClaseGuardado ?? '--'}/5</Text>
               </View>
             </View>
+
+            {ratingInstructorGuardado && (
+              <View style={styles.calificacionRow}>
+                <Text style={styles.calificacionSubLabel}>Profesor</Text>
+                <View style={styles.calificacionStars}>
+                  {[1, 2, 3, 4, 5].map((num) => (
+                    <Ionicons
+                      key={num}
+                      name={ratingInstructorGuardado >= num ? 'star' : 'star-outline'}
+                      size={18}
+                      color={ratingInstructorGuardado >= num ? '#fbbf24' : '#d1d5db'}
+                    />
+                  ))}
+                  <Text style={styles.calificacionRatingText}>{ratingInstructorGuardado}/5</Text>
+                </View>
+              </View>
+            )}
+
             {calificacion.comentario && (
               <View style={styles.comentarioContainer}>
                 <Text style={styles.comentarioLabel}>Tu comentario:</Text>
@@ -222,7 +315,9 @@ const HistorialScreen = () => {
             <Text style={styles.yaCalificadaText}>Ya calificaste esta clase</Text>
           </View>
         ) : (
-          <Text style={styles.calificacionExpirada}>Calificación expirada</Text>
+          <Text style={styles.calificacionExpirada}>
+            {mensajeEstadoCalificacion}
+          </Text>
         )}
       </View>
     );
@@ -235,7 +330,8 @@ const HistorialScreen = () => {
 
   const abrirModalCalificacion = (asistencia) => {
     setSelectedAsistencia(asistencia);
-    setRating(0);
+    setRatingClase(0);
+    setRatingInstructor(0);
     setComentario('');
     setModalVisible(true);
   };
@@ -243,13 +339,14 @@ const HistorialScreen = () => {
   const cerrarModal = () => {
     setModalVisible(false);
     setSelectedAsistencia(null);
-    setRating(0);
+    setRatingClase(0);
+    setRatingInstructor(0);
     setComentario('');
   };
 
   const enviarCalificacion = async () => {
-    if (rating < 1 || rating > 5) {
-      Alert.alert('Calificación inválida', 'Por favor selecciona entre 1 y 5 estrellas.');
+    if (ratingClase < 1 || ratingInstructor < 1) {
+      Alert.alert('Calificación incompleta', 'Debes calificar la clase y al profesor con 1 a 5 estrellas.');
       return;
     }
 
@@ -270,12 +367,14 @@ const HistorialScreen = () => {
       await api.post('/calificaciones', {
         userId: user.id,
         claseId,
-        rating,
+        ratingClase,
+        ratingInstructor,
         comentario: comentario.trim() || null,
       });
       Alert.alert('¡Gracias!', 'Tu calificación fue enviada exitosamente.');
       cerrarModal();
       await loadCalificaciones();
+      await loadPendientes();
       loadHistorial(true);
     } catch (error) {
       Alert.alert(
@@ -287,25 +386,23 @@ const HistorialScreen = () => {
     }
   };
 
-  const renderStars = () => {
-    return (
-      <View style={styles.starsContainer}>
-        {[1, 2, 3, 4, 5].map((num) => (
-          <TouchableOpacity
-            key={num}
-            onPress={() => setRating(num)}
-            style={styles.starButton}
-          >
-            <Ionicons
-              name={rating >= num ? 'star' : 'star-outline'}
-              size={40}
-              color={rating >= num ? '#fbbf24' : '#d1d5db'}
-            />
-          </TouchableOpacity>
-        ))}
-      </View>
-    );
-  };
+  const renderStars = (value, onSelect) => (
+    <View style={styles.starsContainer}>
+      {[1, 2, 3, 4, 5].map((num) => (
+        <TouchableOpacity
+          key={num}
+          onPress={() => onSelect(num)}
+          style={styles.starButton}
+        >
+          <Ionicons
+            name={value >= num ? 'star' : 'star-outline'}
+            size={40}
+            color={value >= num ? '#fbbf24' : '#d1d5db'}
+          />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   if (loading) {
     return (
@@ -369,11 +466,19 @@ const HistorialScreen = () => {
                   {selectedAsistencia.Clase?.disciplina || 'General'}
                 </Text>
 
-                <Text style={styles.modalLabel}>Tu calificación</Text>
-                {renderStars()}
-                {rating > 0 && (
+                <Text style={styles.modalLabel}>Calificación de la clase</Text>
+                {renderStars(ratingClase, setRatingClase)}
+                {ratingClase > 0 && (
                   <Text style={styles.ratingText}>
-                    {rating} {rating === 1 ? 'estrella' : 'estrellas'}
+                    {ratingClase} {ratingClase === 1 ? 'estrella' : 'estrellas'}
+                  </Text>
+                )}
+
+                <Text style={styles.modalLabel}>Calificación del profesor</Text>
+                {renderStars(ratingInstructor, setRatingInstructor)}
+                {ratingInstructor > 0 && (
+                  <Text style={styles.ratingText}>
+                    {ratingInstructor} {ratingInstructor === 1 ? 'estrella' : 'estrellas'}
                   </Text>
                 )}
 
@@ -389,9 +494,12 @@ const HistorialScreen = () => {
                 />
 
                 <TouchableOpacity
-                  style={[styles.enviarButton, rating === 0 && styles.enviarButtonDisabled]}
+                  style={[
+                    styles.enviarButton,
+                    (ratingClase === 0 || ratingInstructor === 0) && styles.enviarButtonDisabled,
+                  ]}
                   onPress={enviarCalificacion}
-                  disabled={rating === 0 || enviandoCalificacion}
+                  disabled={ratingClase === 0 || ratingInstructor === 0 || enviandoCalificacion}
                 >
                   {enviandoCalificacion ? (
                     <ActivityIndicator color="#fff" />
@@ -509,6 +617,12 @@ const styles = StyleSheet.create({
       color: '#0284c7',
       fontWeight: '600',
     },
+    pendienteWindow: {
+      marginTop: 8,
+      color: '#475569',
+      fontSize: 12,
+      fontStyle: 'italic',
+    },
     comentario: {
         fontSize: 13,
         color: '#2c3e50',
@@ -562,6 +676,17 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         color: '#374151',
+    },
+    calificacionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
+    },
+    calificacionSubLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#475569',
     },
     calificacionStars: {
         flexDirection: 'row',

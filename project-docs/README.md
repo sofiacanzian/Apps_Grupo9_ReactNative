@@ -70,6 +70,13 @@ npx expo run:android
 - El job de recordatorios (`jobs/reminder.job.js`) corre cada 30 minutos y envía push a reservas de clases que inician en 1–2 horas (requiere `expo_push_token` en usuarios).
 - Al cancelar una reserva se envía push automático.
 
+## Calificaciones de clases
+- La app ofrece calificar una clase solo si el usuario hizo check-in en las últimas 24 horas; fuera de esa ventana el backend responde 403.
+- Endpoint `POST /api/calificaciones` valida asistencia reciente y evita duplicar calificaciones por `userId+claseId`.
+- Endpoint `GET /api/calificaciones/user/:userId/pending` devuelve las asistencias del último día que aún no fueron calificadas (incluye `expiresAt`).
+- Endpoint `GET /api/calificaciones/user/:userId` mantiene el historial personal de calificaciones ordenado por fecha.
+- Cada registro guarda 1–5 estrellas para la clase (`rating`) y para el profesor (`ratingInstructor`). Ejecuta una vez en MySQL: `ALTER TABLE calificaciones ADD COLUMN ratingInstructor TINYINT NULL;` antes de desplegar la nueva versión.
+
 ## Datos de prueba
 - `npm run seed` en el backend: crea sedes, usuarios, clases y reservas para probar flujo completo.
 - `npm run seed:reminder-class`: genera una clase a ~1h para validar recordatorios.

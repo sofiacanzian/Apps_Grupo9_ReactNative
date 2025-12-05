@@ -18,7 +18,7 @@ const initReminderJob = () => {
         }
     });
 
-    console.log('✅ Reminder job iniciado - se ejecutará cada 30 minutos');
+    console.log('✅ Reminder job iniciado - se ejecutará cada 1 minutos');
 };
 
 module.exports = { initReminderJob };
